@@ -1,0 +1,58 @@
+@model Usuario
+@{
+    ViewData["Title"] = "Editar usuario";
+    var esAdministrador = User.IsInRole("Administrador");
+}
+
+<h1>Editar usuario</h1>
+
+<form asp-action="Edit" asp-route-id="@Model.Id" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="Id" />
+
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label asp-for="Nombre" class="form-label"></label>
+            <input asp-for="Nombre" class="form-control" />
+        </div>
+        <div class="col-md-6 mb-3">
+            <label asp-for="Apellido" class="form-label"></label>
+            <input asp-for="Apellido" class="form-control" />
+        </div>
+    </div>
+    <div class="mb-3">
+        <label asp-for="NombreUsuario" class="form-label">Nombre de usuario</label>
+        <input asp-for="NombreUsuario" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Email" class="form-label"></label>
+        <input asp-for="Email" class="form-control" />
+        <span asp-validation-for="Email" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Avatar" class="form-label">URL del avatar</label>
+        <input asp-for="Avatar" class="form-control" />
+    </div>
+
+    @if (esAdministrador)
+    {
+        <div class="mb-3">
+            <label asp-for="Rol" class="form-label"></label>
+            <select asp-for="Rol" class="form-select" asp-items="Html.GetEnumSelectList<RolUsuario>()"></select>
+        </div>
+        <div class="form-check mb-3">
+            <input asp-for="Activo" class="form-check-input" />
+            <label asp-for="Activo" class="form-check-label">Activo</label>
+        </div>
+    }
+    else
+    {
+        <input type="hidden" asp-for="Rol" />
+        <input type="hidden" asp-for="Activo" />
+        <p class="text-muted small">El rol y el estado de la cuenta solo puede modificarlos un administrador.</p>
+    }
+
+    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Cancelar</a>
+</form>
+

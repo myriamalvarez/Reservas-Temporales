@@ -1,0 +1,36 @@
+@model Reserva
+@{
+    ViewData["Title"] = "Nueva reserva";
+}
+
+<h1>Nueva reserva</h1>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="IdInmueble" />
+
+    <div class="mb-3">
+        <label class="form-label">Inquilino</label>
+        <select asp-for="IdInquilino" class="form-select" asp-items="ViewBag.Inquilinos">
+            <option value="">-- Seleccionar --</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-3">
+            <label asp-for="FechaDesde" class="form-label">Desde</label>
+            <input asp-for="FechaDesde" type="date" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="FechaHasta" class="form-label">Hasta</label>
+            <input asp-for="FechaHasta" type="date" class="form-control" />
+        </div>
+        <div class="col-md-4 mb-3">
+            <label asp-for="MontoDiario" class="form-label">Monto diario</label>
+            <input asp-for="MontoDiario" class="form-control" />
+        </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Confirmar reserva</button>
+    <a asp-controller="Inmueble" asp-action="Details" asp-route-id="@Model.IdInmueble" class="btn btn-link">Cancelar</a>
+</form>

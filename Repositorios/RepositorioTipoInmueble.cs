@@ -27,6 +27,33 @@ namespace Reservas_Temporales.Repositorios
             return tipos;
         }
 
+        // Paginado por servidor. Es un catálogo chico, pero se mantiene el mismo patrón por consistencia.
+        public async Task<(List<TipoInmueble> Items, int Total)> ListarPaginadoAsync(int pagina, int tamanioPagina)
+        {
+            if (pagina < 1) pagina = 1;
+            if (tamanioPagina < 1) tamanioPagina = 10;
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            await conexion.OpenAsync();
+
+            var sqlTotal = "SELECT COUNT(*) FROM tipo_inmueble";
+            using var comandoTotal = new MySqlCommand(sqlTotal, conexion);
+            var total = Convert.ToInt32(await comandoTotal.ExecuteScalarAsync());
+
+            var sqlPagina = "SELECT id, nombre, activo FROM tipo_inmueble " +
+                             "ORDER BY nombre LIMIT @tamanioPagina OFFSET @offset";
+            using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
+            comandoPagina.Parameters.AddWithValue("@tamanioPagina", tamanioPagina);
+            comandoPagina.Parameters.AddWithValue("@offset", (pagina - 1) * tamanioPagina);
+
+            var items = new List<TipoInmueble>();
+            using var lectorPagina = await comandoPagina.ExecuteReaderAsync();
+            while (await lectorPagina.ReadAsync())
+                items.Add(Mapear(lectorPagina));
+
+            return (items, total);
+        }
+
         public async Task<TipoInmueble?> ObtenerPorIdAsync(int id)
         {
             using var conexion = _conexionBD.ObtenerConexion();

@@ -1,0 +1,32 @@
+@{
+    ViewData["Title"] = "Buscar disponibilidad";
+}
+
+<h1>Buscar inmuebles disponibles</h1>
+<p class="text-muted">Elegí un rango de fechas para ver qué inmuebles no tienen reservas superpuestas.</p>
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<form asp-action="Buscar" method="post" class="row g-3">
+    <div class="col-md-3">
+        <label class="form-label">Desde</label>
+        <input type="date" name="fechaDesde" class="form-control" required />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Hasta</label>
+        <input type="date" name="fechaHasta" class="form-control" required />
+    </div>
+    <div class="col-md-2">
+        <label class="form-label">Cupo mínimo</label>
+        <input type="number" name="cupoMinimo" class="form-control" min="1" />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Tipo</label>
+        <select name="idTipo" class="form-select" asp-items="ViewBag.Tipos">
+            <option value="">-- Cualquiera --</option>
+        </select>
+    </div>
+    <div class="col-md-1 d-flex align-items-end">
+        <button type="submit" class="btn btn-primary w-100">Buscar</button>
+    </div>
+</form>

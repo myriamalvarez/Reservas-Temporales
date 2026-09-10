@@ -1,8 +1,84 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model DashboardViewModel
+@{
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<h1 class="mb-4">Panel principal</h1>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-primary h-100">
+            <div class="card-body">
+                <h6 class="card-title">Inmuebles</h6>
+                <p class="display-6 mb-0">@Model.TotalInmuebles</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-success h-100">
+            <div class="card-body">
+                <h6 class="card-title">Disponibles</h6>
+                <p class="display-6 mb-0">@Model.InmueblesDisponibles</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-info h-100">
+            <div class="card-body">
+                <h6 class="card-title">Reservas vigentes</h6>
+                <p class="display-6 mb-0">@Model.ReservasVigentes</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <div class="card text-bg-warning h-100">
+            <div class="card-body">
+                <h6 class="card-title">Vencen en 7 días</h6>
+                <p class="display-6 mb-0">@Model.ReservasProximasATerminar.Count</p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <a class="btn btn-outline-primary w-100" asp-controller="Inmueble" asp-action="Buscar">Buscar disponibilidad</a>
+    </div>
+    <div class="col-md-3">
+        <a class="btn btn-outline-primary w-100" asp-controller="Inmueble" asp-action="Create">Nuevo inmueble</a>
+    </div>
+    <div class="col-md-3">
+        <a class="btn btn-outline-primary w-100" asp-controller="Inquilino" asp-action="Create">Nuevo inquilino</a>
+    </div>
+    <div class="col-md-3">
+        <a class="btn btn-outline-primary w-100" asp-controller="Reserva" asp-action="Index">Ver reservas vigentes</a>
+    </div>
+</div>
+
+<h4>Reservas que vencen pronto</h4>
+@if (!Model.ReservasProximasATerminar.Any())
+{
+    <p class="text-muted">No hay reservas por vencer en los próximos 7 días.</p>
+}
+else
+{
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Reserva</th>
+                <th>Fecha hasta</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var reserva in Model.ReservasProximasATerminar)
+            {
+                <tr>
+                    <td>#@reserva.Id</td>
+                    <td>@reserva.FechaHasta.ToString("dd/MM/yyyy")</td>
+                    <td><a asp-controller="Reserva" asp-action="Details" asp-route-id="@reserva.Id">Ver</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

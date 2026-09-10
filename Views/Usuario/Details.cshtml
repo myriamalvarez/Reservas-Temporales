@@ -1,0 +1,42 @@
+@model Usuario
+@{
+    ViewData["Title"] = "Perfil de usuario";
+}
+
+<h1>@Model.Nombre @Model.Apellido</h1>
+<p class="text-muted">@Model.NombreUsuario · @Model.Rol</p>
+
+<ul class="list-group mb-4">
+    <li class="list-group-item"><strong>Email:</strong> @Model.Email</li>
+    <li class="list-group-item"><strong>Rol:</strong> @Model.Rol</li>
+    <li class="list-group-item">
+        <strong>Estado:</strong>
+        <span class="badge @(Model.Activo ? "bg-success" : "bg-secondary")">
+            @(Model.Activo ? "Activo" : "Inactivo")
+        </span>
+    </li>
+</ul>
+
+<div class="d-flex gap-2 mb-4">
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Editar perfil</a>
+</div>
+
+<h5>Cambiar contraseña</h5>
+<form asp-action="CambiarPassword" method="post" class="row g-2 align-items-end">
+    <input type="hidden" name="id" value="@Model.Id" />
+    <div class="col-md-4">
+        <input type="password" name="nuevaPassword" class="form-control" placeholder="Nueva contraseña" required minlength="6" />
+    </div>
+    <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary">Actualizar contraseña</button>
+    </div>
+</form>
+
+@if (User.IsInRole("Administrador"))
+{
+    <form asp-action="Eliminar" method="post" class="mt-4" onsubmit="return confirm('¿Eliminar este usuario?');">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <button type="submit" class="btn btn-outline-danger">Eliminar usuario</button>
+    </form>
+}
+

@@ -1,0 +1,45 @@
+@model List<Reserva>
+@{
+    ViewData["Title"] = "Reservas próximas a vencer";
+    int dias = ViewBag.Dias;
+}
+
+<h1>Reservas que vencen en los próximos días</h1>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-auto">
+        <select name="dias" class="form-select" onchange="this.form.submit()">
+            <option value="7" selected="@(dias == 7)">7 días</option>
+            <option value="15" selected="@(dias == 15)">15 días</option>
+            <option value="30" selected="@(dias == 30)">30 días</option>
+            <option value="60" selected="@(dias == 60)">60 días</option>
+        </select>
+    </div>
+</form>
+
+@if (!Model.Any())
+{
+    <p class="text-muted">No hay reservas que venzan en los próximos @dias días.</p>
+}
+else
+{
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Reserva</th>
+                <th>Hasta</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var reserva in Model)
+            {
+                <tr>
+                    <td>#@reserva.Id</td>
+                    <td>@reserva.FechaHasta.ToString("dd/MM/yyyy")</td>
+                    <td><a asp-action="Details" asp-route-id="@reserva.Id">Ver</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

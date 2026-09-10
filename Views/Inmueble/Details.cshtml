@@ -1,0 +1,132 @@
+@using System.Linq
+@model Inmueble
+@{
+    ViewData["Title"] = "Detalle del inmueble";
+    var portada = Model.Imagenes.FirstOrDefault(i => i.EsPortada);
+    var imagenesInterior = Model.Imagenes.Where(i => !i.EsPortada).ToList();
+}
+
+<h1>@Model.Direccion</h1>
+<p class="text-muted">@Model.Tipo?.Nombre · Propietario: @Model.Propietario?.Nombre @Model.Propietario?.Apellido</p>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <ul class="list-group">
+            <li class="list-group-item"><strong>Cupo:</strong> @Model.Cupo personas</li>
+            <li class="list-group-item"><strong>Precio por día:</strong> @Model.PrecioDia.ToString("C")</li>
+            <li class="list-group-item"><strong>Seña:</strong> @Model.PorcentajeSena%</li>
+            <li class="list-group-item"><strong>Coordenadas:</strong> @Model.Coord</li>
+            <li class="list-group-item">
+                <strong>Estado:</strong>
+                <span class="badge @(Model.Estado == EstadoInmueble.Disponible ? "bg-success" : "bg-secondary")">
+                    @Model.Estado
+                </span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<h4 class="mb-3">Fotos del inmueble</h4>
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h5>Foto de Portada</h5>
+
+        @if (portada != null)
+        {
+            <p class="text-muted mb-1 small">Portada actual:</p>
+            <img src="@portada.Url" class="img-fluid rounded border mb-2" style="max-height:220px;object-fit:cover;" />
+            <div class="mb-3">
+                <form asp-controller="ImagenInmueble" asp-action="Eliminar" method="post"
+                      onsubmit="return confirm('¿Eliminar la foto de portada?');">
+                    <input type="hidden" name="id" value="@portada.Id" />
+                    <input type="hidden" name="idInmueble" value="@Model.Id" />
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                </form>
+            </div>
+        }
+        else
+        {
+            <p class="text-muted">Todavía no hay foto de portada.</p>
+        }
+
+        <form asp-controller="ImagenInmueble" asp-action="Create" method="post" enctype="multipart/form-data"
+              class="d-flex gap-2 align-items-center">
+            <input type="hidden" name="idInmueble" value="@Model.Id" />
+            <input type="hidden" name="esPortada" value="true" />
+            <input type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp" class="form-control" required />
+            <button type="submit" class="btn btn-primary text-nowrap">Subir</button>
+        </form>
+    </div>
+
+    <div class="col-md-6">
+        <h5>Imágenes del Interior</h5>
+
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            @foreach (var imagen in imagenesInterior)
+            {
+                <div class="position-relative">
+                    <img src="@imagen.Url" style="width:120px;height:90px;object-fit:cover;" class="rounded border" />
+                    <div class="d-flex justify-content-between mt-1 gap-1">
+                        <form asp-controller="ImagenInmueble" asp-action="MarcarPortada" method="post">
+                            <input type="hidden" name="id" value="@imagen.Id" />
+                            <input type="hidden" name="idInmueble" value="@Model.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Usar como portada">
+                                Portada
+                            </button>
+                        </form>
+                        <form asp-controller="ImagenInmueble" asp-action="Eliminar" method="post"
+                              onsubmit="return confirm('¿Eliminar esta imagen?');">
+                            <input type="hidden" name="id" value="@imagen.Id" />
+                            <input type="hidden" name="idInmueble" value="@Model.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                        </form>
+                    </div>
+                </div>
+            }
+            @if (!imagenesInterior.Any())
+            {
+                <p class="text-muted">Todavía no hay imágenes del interior.</p>
+            }
+        </div>
+
+        <form asp-controller="ImagenInmueble" asp-action="Create" method="post" enctype="multipart/form-data"
+              class="d-flex gap-2 align-items-center">
+            <input type="hidden" name="idInmueble" value="@Model.Id" />
+            <input type="hidden" name="esPortada" value="false" />
+            <input type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp" class="form-control" required />
+            <button type="submit" class="btn btn-outline-primary text-nowrap">Subir</button>
+        </form>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mb-4">
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Editar</a>
+
+    @if (Model.Estado == EstadoInmueble.Disponible)
+    {
+        <form asp-action="CambiarEstado" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="estado" value="Suspendido" />
+            <button type="submit" class="btn btn-outline-warning">Suspender oferta</button>
+        </form>
+    }
+    else
+    {
+        <form asp-action="CambiarEstado" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="hidden" name="estado" value="Disponible" />
+            <button type="submit" class="btn btn-outline-success">Reactivar oferta</button>
+        </form>
+    }
+
+    <form asp-action="Eliminar" method="post" onsubmit="return confirm('¿Eliminar este inmueble?');">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <button type="submit" class="btn btn-outline-danger">Eliminar</button>
+    </form>
+</div>
+

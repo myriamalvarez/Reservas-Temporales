@@ -1,0 +1,112 @@
+@{
+    ViewData["Title"] = "Inmuebles sin reservas recientes";
+}
+
+<h1 class="mb-3">Inmuebles sin reservas recientes</h1>
+
+<div id="app">
+    <form class="row g-2 mb-3">
+        <div class="col-auto">
+            <label class="col-form-label">Sin reservas en los últimos</label>
+        </div>
+        <div class="col-auto">
+            <select class="form-select" v-model.number="dias" @@change="irAPagina(1)">
+                <option :value="30">30 días</option>
+                <option :value="60">60 días</option>
+                <option :value="90">90 días</option>
+                <option :value="180">180 días</option>
+            </select>
+        </div>
+    </form>
+
+    <div v-if="cargando" class="text-muted">Cargando...</div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <table v-else class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Inmueble</th>
+                <th>Propietario</th>
+                <th>Última reserva</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-if="inmuebles.length === 0">
+                <td colspan="4" class="text-center text-muted">
+                    Todos los inmuebles tuvieron reservas en el período elegido.
+                </td>
+            </tr>
+            <tr v-for="inmueble in inmuebles" :key="inmueble.id">
+                <td>{{ inmueble.direccion }}</td>
+                <td>{{ inmueble.propietarioNombre }}</td>
+                <td>{{ inmueble.ultimaReserva || 'Nunca tuvo reservas' }}</td>
+                <td><a :href="'/Inmueble/Details/' + inmueble.id">Ver</a></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <nav v-if="!cargando && !error && totalPaginas > 1" aria-label="Paginado del informe">
+        <ul class="pagination">
+            <li class="page-item" :class="{ disabled: pagina === 1 }">
+                <button class="page-link" @@click="irAPagina(pagina - 1)">Anterior</button>
+            </li>
+            <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === pagina }">
+                <button class="page-link" @@click="irAPagina(p)">{{ p }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: pagina === totalPaginas }">
+                <button class="page-link" @@click="irAPagina(pagina + 1)">Siguiente</button>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        Vue.createApp({
+            data() {
+                return {
+                    inmuebles: [],
+                    pagina: 1,
+                    tamanioPagina: 10,
+                    totalPaginas: 1,
+                    dias: 30,
+                    cargando: true,
+                    error: null
+                };
+            },
+            methods: {
+                async cargar() {
+                    this.cargando = true;
+                    this.error = null;
+                    try {
+                        const parametros = new URLSearchParams({
+                            pagina: this.pagina,
+                            tamanioPagina: this.tamanioPagina,
+                            dias: this.dias
+                        });
+                        const respuesta = await fetch('/Informe/SinReservasJson?' + parametros.toString());
+                        if (!respuesta.ok) throw new Error('No se pudo cargar el informe.');
+
+                        const datos = await respuesta.json();
+                        this.inmuebles = datos.items;
+                        this.totalPaginas = datos.totalPaginas;
+                    } catch (e) {
+                        this.error = e.message;
+                    } finally {
+                        this.cargando = false;
+                    }
+                },
+                irAPagina(nuevaPagina) {
+                    if (nuevaPagina < 1 || (this.totalPaginas && nuevaPagina > this.totalPaginas)) return;
+                    this.pagina = nuevaPagina;
+                    this.cargar();
+                }
+            },
+            mounted() {
+                this.cargar();
+            }
+        }).mount('#app');
+    </script>
+}
+

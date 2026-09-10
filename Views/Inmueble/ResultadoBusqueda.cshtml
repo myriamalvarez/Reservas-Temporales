@@ -1,0 +1,49 @@
+@model List<Inmueble>
+@{
+    ViewData["Title"] = "Resultado de la búsqueda";
+    var fechaDesde = (DateTime)ViewBag.FechaDesde;
+    var fechaHasta = (DateTime)ViewBag.FechaHasta;
+}
+
+<h1>Inmuebles disponibles</h1>
+<p class="text-muted">Del @fechaDesde.ToString("dd/MM/yyyy") al @fechaHasta.ToString("dd/MM/yyyy")</p>
+
+@if (!Model.Any())
+{
+    <p>No se encontraron inmuebles disponibles para esas fechas.</p>
+    <a asp-action="Buscar" class="btn btn-link">Volver a buscar</a>
+}
+else
+{
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Dirección</th>
+                <th>Tipo</th>
+                <th>Cupo</th>
+                <th>Precio/día</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var inmueble in Model)
+            {
+                <tr>
+                    <td>@inmueble.Direccion</td>
+                    <td>@inmueble.Tipo?.Nombre</td>
+                    <td>@inmueble.Cupo</td>
+                    <td>@inmueble.PrecioDia.ToString("C")</td>
+                    <td>
+                        <a class="btn btn-sm btn-primary"
+                           asp-controller="Reserva" asp-action="Create"
+                           asp-route-idInmueble="@inmueble.Id"
+                           asp-route-fechaDesde="@fechaDesde.ToString("yyyy-MM-dd")"
+                           asp-route-fechaHasta="@fechaHasta.ToString("yyyy-MM-dd")">
+                            Reservar
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

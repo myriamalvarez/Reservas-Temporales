@@ -1,5 +1,6 @@
 using MySqlConnector;
 using Reservas_Temporales.Models;
+using Reservas_Temporales.ViewModels;
 
 namespace Reservas_Temporales.Repositorios
 {
@@ -16,6 +17,15 @@ namespace Reservas_Temporales.Repositorios
             "SELECT id, id_inmueble, id_inquilino, fecha_desde, fecha_hasta, fecha_hasta_original, " +
             "fecha_terminacion, monto_diario, multa, estado, creado_por_user_id, terminado_por_user_id, " +
             "activo, fecha_creacion FROM reserva ";
+
+        // Para listados: incluye dirección del inmueble y nombre del inquilino, más livianos que el modelo completo.
+        private const string SqlListado =
+            "SELECT r.id, r.fecha_desde, r.fecha_hasta, r.monto_diario, r.estado, " +
+            "i.direccion AS inmueble_direccion, " +
+            "CONCAT(iq.apellido, ', ', iq.nombre) AS inquilino_nombre " +
+            "FROM reserva r " +
+            "INNER JOIN inmueble i ON i.id = r.id_inmueble " +
+            "INNER JOIN inquilino iq ON iq.id = r.id_inquilino ";
 
         public async Task<Reserva?> ObtenerPorIdAsync(int id)
         {
@@ -41,6 +51,48 @@ namespace Reservas_Temporales.Repositorios
             while (await lector.ReadAsync())
                 reservas.Add(Mapear(lector));
             return reservas;
+        }
+
+        // Igual que ListarVigentesAsync pero paginado por servidor, para el listado con Vue.
+        public async Task<(List<ReservaListadoItem> Items, int Total)> ListarVigentesPaginadoAsync(
+            int pagina, int tamanioPagina)
+        {
+            if (pagina < 1) pagina = 1;
+            if (tamanioPagina < 1) tamanioPagina = 10;
+
+            const string condicion =
+                "r.activo = 1 AND r.estado = 'vigente' AND CURDATE() BETWEEN r.fecha_desde AND r.fecha_hasta";
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            await conexion.OpenAsync();
+
+            var sqlTotal = "SELECT COUNT(*) FROM reserva r WHERE " + condicion;
+            using var comandoTotal = new MySqlCommand(sqlTotal, conexion);
+            var total = Convert.ToInt32(await comandoTotal.ExecuteScalarAsync());
+
+            var sqlPagina = SqlListado + "WHERE " + condicion +
+                             " ORDER BY r.fecha_hasta LIMIT @tamanioPagina OFFSET @offset";
+            using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
+            comandoPagina.Parameters.AddWithValue("@tamanioPagina", tamanioPagina);
+            comandoPagina.Parameters.AddWithValue("@offset", (pagina - 1) * tamanioPagina);
+
+            var items = new List<ReservaListadoItem>();
+            using var lectorPagina = await comandoPagina.ExecuteReaderAsync();
+            while (await lectorPagina.ReadAsync())
+            {
+                items.Add(new ReservaListadoItem
+                {
+                    Id = lectorPagina.GetInt32("id"),
+                    FechaDesde = lectorPagina.GetDateTime("fecha_desde"),
+                    FechaHasta = lectorPagina.GetDateTime("fecha_hasta"),
+                    MontoDiario = lectorPagina.GetDecimal("monto_diario"),
+                    Estado = ConversionesEnum.ATextoEstadoReserva(lectorPagina.GetString("estado")),
+                    InmuebleDireccion = lectorPagina.GetString("inmueble_direccion"),
+                    InquilinoNombre = lectorPagina.GetString("inquilino_nombre")
+                });
+            }
+
+            return (items, total);
         }
 
         // Informe: reservas que terminan dentro de los próximos X días.

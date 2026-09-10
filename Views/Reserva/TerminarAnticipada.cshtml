@@ -1,0 +1,27 @@
+@model Reserva
+@{
+    ViewData["Title"] = "Terminar anticipadamente";
+}
+
+<h1>Terminar reserva #@Model.Id anticipadamente</h1>
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+<p class="text-muted">
+    Plazo original: @Model.FechaDesde.ToString("dd/MM/yyyy") al @Model.FechaHastaOriginal.ToString("dd/MM/yyyy").
+    La multa se calcula automáticamente según cuánto del plazo se cumplió y se carga como pago de la reserva.
+</p>
+
+<form asp-action="TerminarAnticipada" asp-route-id="@Model.Id" method="post" class="row g-3">
+    <div class="col-md-4">
+        <label class="form-label">Fecha de terminación</label>
+        <input type="date" name="fechaTerminacion"
+               min="@Model.FechaDesde.ToString("yyyy-MM-dd")"
+               max="@Model.FechaHastaOriginal.AddDays(-1).ToString("yyyy-MM-dd")"
+               class="form-control" required />
+    </div>
+    <div class="col-md-12">
+        <button type="submit" class="btn btn-warning">Confirmar terminación y calcular multa</button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Cancelar</a>
+    </div>
+</form>

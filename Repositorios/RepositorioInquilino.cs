@@ -29,6 +29,36 @@ namespace Reservas_Temporales.Repositorios
             return inquilinos;
         }
 
+        // Paginado por servidor para el listado con Vue.
+        public async Task<(List<Inquilino> Items, int Total)> ListarPaginadoAsync(
+            int pagina, int tamanioPagina, bool soloActivos = true)
+        {
+            if (pagina < 1) pagina = 1;
+            if (tamanioPagina < 1) tamanioPagina = 10;
+
+            var whereSql = soloActivos ? " WHERE activo = 1" : "";
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            await conexion.OpenAsync();
+
+            var sqlTotal = "SELECT COUNT(*) FROM inquilino" + whereSql;
+            using var comandoTotal = new MySqlCommand(sqlTotal, conexion);
+            var total = Convert.ToInt32(await comandoTotal.ExecuteScalarAsync());
+
+            var sqlPagina = $"SELECT {ColumnasBase} FROM inquilino" + whereSql +
+                             " ORDER BY apellido, nombre LIMIT @tamanioPagina OFFSET @offset";
+            using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
+            comandoPagina.Parameters.AddWithValue("@tamanioPagina", tamanioPagina);
+            comandoPagina.Parameters.AddWithValue("@offset", (pagina - 1) * tamanioPagina);
+
+            var items = new List<Inquilino>();
+            using var lectorPagina = await comandoPagina.ExecuteReaderAsync();
+            while (await lectorPagina.ReadAsync())
+                items.Add(Mapear(lectorPagina));
+
+            return (items, total);
+        }
+
         public async Task<Inquilino?> ObtenerPorIdAsync(int id)
         {
             using var conexion = _conexionBD.ObtenerConexion();

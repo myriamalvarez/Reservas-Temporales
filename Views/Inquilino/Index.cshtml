@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Inquilinos";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Inquilinos</h1>
+    <a asp-action="Create" class="btn btn-primary">+ Nuevo inquilino</a>
+</div>
+
+<div id="app">
+    <div v-if="cargando" class="text-muted">Cargando...</div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <table v-else class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>DNI</th>
+                <th>Email</th>
+                <th>Teléfono</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-if="inquilinos.length === 0">
+                <td colspan="5" class="text-center text-muted">No hay inquilinos para mostrar.</td>
+            </tr>
+            <tr v-for="inquilino in inquilinos" :key="inquilino.id">
+                <td>{{ inquilino.apellido }}, {{ inquilino.nombre }}</td>
+                <td>{{ inquilino.dni }}</td>
+                <td>{{ inquilino.email }}</td>
+                <td>{{ inquilino.telefono }}</td>
+                <td><a :href="'/Inquilino/Details/' + inquilino.id">Ver</a></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <nav v-if="!cargando && !error && totalPaginas > 1" aria-label="Paginado de inquilinos">
+        <ul class="pagination">
+            <li class="page-item" :class="{ disabled: pagina === 1 }">
+                <button class="page-link" @@click="irAPagina(pagina - 1)">Anterior</button>
+            </li>
+            <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === pagina }">
+                <button class="page-link" @@click="irAPagina(p)">{{ p }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: pagina === totalPaginas }">
+                <button class="page-link" @@click="irAPagina(pagina + 1)">Siguiente</button>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        Vue.createApp({
+            data() {
+                return {
+                    inquilinos: [],
+                    pagina: 1,
+                    tamanioPagina: 10,
+                    totalPaginas: 1,
+                    cargando: true,
+                    error: null
+                };
+            },
+            methods: {
+                async cargar() {
+                    this.cargando = true;
+                    this.error = null;
+                    try {
+                        const parametros = new URLSearchParams({ pagina: this.pagina, tamanioPagina: this.tamanioPagina });
+                        const respuesta = await fetch('/Inquilino/ListarJson?' + parametros.toString());
+                        if (!respuesta.ok) throw new Error('No se pudo cargar el listado.');
+
+                        const datos = await respuesta.json();
+                        this.inquilinos = datos.items;
+                        this.totalPaginas = datos.totalPaginas;
+                    } catch (e) {
+                        this.error = e.message;
+                    } finally {
+                        this.cargando = false;
+                    }
+                },
+                irAPagina(nuevaPagina) {
+                    if (nuevaPagina < 1 || nuevaPagina > this.totalPaginas) return;
+                    this.pagina = nuevaPagina;
+                    this.cargar();
+                }
+            },
+            mounted() {
+                this.cargar();
+            }
+        }).mount('#app');
+    </script>
+}
+

@@ -49,6 +49,51 @@ namespace Reservas_Temporales.Repositorios
             return inmuebles;
         }
 
+        // Paginado por servidor (requisito del proyecto): trae solo una página de resultados
+        // más el total de registros, para que el cliente arme los controles de paginación.
+        public async Task<(List<Inmueble> Items, int Total)> ListarPaginadoAsync(
+            int pagina, int tamanioPagina,
+            bool soloActivos = true, EstadoInmueble? estado = null, int? idPropietario = null)
+        {
+            if (pagina < 1) pagina = 1;
+            if (tamanioPagina < 1) tamanioPagina = 10;
+
+            var condiciones = new List<string>();
+            if (soloActivos) condiciones.Add("i.activo = 1");
+            if (estado.HasValue) condiciones.Add("i.estado = @estado");
+            if (idPropietario.HasValue) condiciones.Add("i.id_propietario = @idPropietario");
+            var whereSql = condiciones.Count > 0 ? " WHERE " + string.Join(" AND ", condiciones) : "";
+
+            using var conexion = _conexionBD.ObtenerConexion();
+            await conexion.OpenAsync();
+
+            void AgregarFiltros(MySqlCommand comandoAAgregar)
+            {
+                if (estado.HasValue)
+                    comandoAAgregar.Parameters.AddWithValue("@estado", ConversionesEnum.AEstadoInmuebleTexto(estado.Value));
+                if (idPropietario.HasValue)
+                    comandoAAgregar.Parameters.AddWithValue("@idPropietario", idPropietario.Value);
+            }
+
+            var sqlTotal = "SELECT COUNT(*) FROM inmueble i " + whereSql;
+            using var comandoTotal = new MySqlCommand(sqlTotal, conexion);
+            AgregarFiltros(comandoTotal);
+            var total = Convert.ToInt32(await comandoTotal.ExecuteScalarAsync());
+
+            var sqlPagina = SqlBase + whereSql + " ORDER BY i.direccion LIMIT @tamanioPagina OFFSET @offset";
+            using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
+            AgregarFiltros(comandoPagina);
+            comandoPagina.Parameters.AddWithValue("@tamanioPagina", tamanioPagina);
+            comandoPagina.Parameters.AddWithValue("@offset", (pagina - 1) * tamanioPagina);
+
+            var items = new List<Inmueble>();
+            using var lectorPagina = await comandoPagina.ExecuteReaderAsync();
+            while (await lectorPagina.ReadAsync())
+                items.Add(Mapear(lectorPagina));
+
+            return (items, total);
+        }
+
         public async Task<Inmueble?> ObtenerPorIdAsync(int id)
         {
             using var conexion = _conexionBD.ObtenerConexion();

@@ -1,0 +1,113 @@
+@model Reserva
+@{
+    ViewData["Title"] = "Detalle de la reserva";
+}
+
+<h1>Reserva #@Model.Id</h1>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <ul class="list-group">
+            <li class="list-group-item"><strong>Desde:</strong> @Model.FechaDesde.ToString("dd/MM/yyyy")</li>
+            <li class="list-group-item"><strong>Hasta:</strong> @Model.FechaHasta.ToString("dd/MM/yyyy")</li>
+            @if (Model.Estado == EstadoReserva.FinalizadaAnticipada)
+            {
+                <li class="list-group-item text-muted">
+                    <strong>Fecha original de finalización:</strong> @Model.FechaHastaOriginal.ToString("dd/MM/yyyy")
+                </li>
+                <li class="list-group-item">
+                    <strong>Multa aplicada:</strong> @Model.Multa?.ToString("C")
+                </li>
+            }
+            <li class="list-group-item"><strong>Monto diario:</strong> @Model.MontoDiario.ToString("C")</li>
+            <li class="list-group-item">
+                <strong>Estado:</strong>
+                <span class="badge @(Model.Estado == EstadoReserva.Vigente ? "bg-success" : "bg-secondary")">
+                    @Model.Estado
+                </span>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mb-4">
+    @if (Model.Estado == EstadoReserva.Vigente)
+    {
+        <a asp-action="TerminarAnticipada" asp-route-id="@Model.Id" class="btn btn-outline-warning">
+            Terminar anticipadamente
+        </a>
+    }
+    <a asp-action="Renovar" asp-route-id="@Model.Id" class="btn btn-outline-primary">Renovar</a>
+    <form asp-action="Eliminar" method="post" onsubmit="return confirm('¿Eliminar esta reserva?');">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <button type="submit" class="btn btn-outline-danger">Eliminar</button>
+    </form>
+</div>
+
+<h4>Pagos</h4>
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Concepto</th>
+            <th>Fecha</th>
+            <th>Importe</th>
+            <th>Estado</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var pago in Model.Pagos)
+        {
+            <tr class="@(pago.Anulado ? "text-decoration-line-through text-muted" : "")">
+                <td>
+                    <form asp-controller="Pago" asp-action="EditarConcepto" method="post" class="d-flex gap-1">
+                        <input type="hidden" name="id" value="@pago.Id" />
+                        <input type="hidden" name="idReserva" value="@Model.Id" />
+                        <input type="text" name="concepto" value="@pago.Concepto" class="form-control form-control-sm" @(pago.Anulado ? "disabled" : "") />
+                        @if (!pago.Anulado)
+                        {
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Guardar</button>
+                        }
+                    </form>
+                </td>
+                <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
+                <td>@pago.Importe.ToString("C")</td>
+                <td>@(pago.Anulado ? "Anulado" : "Activo")</td>
+                <td>
+                    @if (!pago.Anulado)
+                    {
+                        <form asp-controller="Pago" asp-action="Anular" method="post" onsubmit="return confirm('¿Anular este pago?');">
+                            <input type="hidden" name="id" value="@pago.Id" />
+                            <input type="hidden" name="idReserva" value="@Model.Id" />
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Anular</button>
+                        </form>
+                    }
+                </td>
+            </tr>
+        }
+        @if (!Model.Pagos.Any())
+        {
+            <tr><td colspan="5" class="text-center text-muted">Todavía no hay pagos registrados.</td></tr>
+        }
+    </tbody>
+</table>
+
+<h5>Registrar nuevo pago</h5>
+<form asp-controller="Pago" asp-action="Create" method="post" class="row g-2 align-items-end">
+    <input type="hidden" name="IdReserva" value="@Model.Id" />
+    <div class="col-md-4">
+        <label class="form-label">Concepto</label>
+        <input type="text" name="Concepto" class="form-control" required />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Fecha</label>
+        <input type="date" name="FechaPago" class="form-control" required />
+    </div>
+    <div class="col-md-3">
+        <label class="form-label">Importe</label>
+        <input type="number" step="0.01" name="Importe" class="form-control" required />
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-primary w-100">Registrar</button>
+    </div>
+</form>

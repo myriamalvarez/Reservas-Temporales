@@ -27,6 +27,17 @@ namespace Reservas_Temporales.Repositorios
             return imagenes;
         }
 
+        public async Task<ImagenInmueble?> ObtenerPorIdAsync(int id)
+        {
+            using var conexion = _conexionBD.ObtenerConexion();
+            var sql = "SELECT id, id_inmueble, url, es_portada FROM imagen_inmueble WHERE id = @id";
+            using var comando = new MySqlCommand(sql, conexion);
+            comando.Parameters.AddWithValue("@id", id);
+            await conexion.OpenAsync();
+            using var lector = await comando.ExecuteReaderAsync();
+            return await lector.ReadAsync() ? Mapear(lector) : null;
+        }
+
         public async Task<int> CrearAsync(ImagenInmueble imagen)
         {
             using var conexion = _conexionBD.ObtenerConexion();

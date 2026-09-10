@@ -1,0 +1,100 @@
+@{
+    ViewData["Title"] = "Usuarios";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Usuarios</h1>
+    <a asp-action="Create" class="btn btn-primary">+ Nuevo usuario</a>
+</div>
+
+<div id="app">
+    <div v-if="cargando" class="text-muted">Cargando...</div>
+    <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+
+    <table v-else class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Rol</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr v-if="usuarios.length === 0">
+                <td colspan="5" class="text-center text-muted">No hay usuarios para mostrar.</td>
+            </tr>
+            <tr v-for="usuario in usuarios" :key="usuario.id">
+                <td>{{ usuario.nombreUsuario }}</td>
+                <td>{{ usuario.apellido }}, {{ usuario.nombre }}</td>
+                <td>{{ usuario.email }}</td>
+                <td>
+                    <span class="badge" :class="usuario.rol === 'Administrador' ? 'bg-primary' : 'bg-secondary'">
+                        {{ usuario.rol }}
+                    </span>
+                </td>
+                <td><a :href="'/Usuario/Details/' + usuario.id">Ver</a></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <nav v-if="!cargando && !error && totalPaginas > 1" aria-label="Paginado de usuarios">
+        <ul class="pagination">
+            <li class="page-item" :class="{ disabled: pagina === 1 }">
+                <button class="page-link" @@click="irAPagina(pagina - 1)">Anterior</button>
+            </li>
+            <li v-for="p in totalPaginas" :key="p" class="page-item" :class="{ active: p === pagina }">
+                <button class="page-link" @@click="irAPagina(p)">{{ p }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: pagina === totalPaginas }">
+                <button class="page-link" @@click="irAPagina(pagina + 1)">Siguiente</button>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+@section Scripts {
+    <script>
+        Vue.createApp({
+            data() {
+                return {
+                    usuarios: [],
+                    pagina: 1,
+                    tamanioPagina: 10,
+                    totalPaginas: 1,
+                    cargando: true,
+                    error: null
+                };
+            },
+            methods: {
+                async cargar() {
+                    this.cargando = true;
+                    this.error = null;
+                    try {
+                        const parametros = new URLSearchParams({ pagina: this.pagina, tamanioPagina: this.tamanioPagina });
+                        const respuesta = await fetch('/Usuario/ListarJson?' + parametros.toString());
+                        if (!respuesta.ok) throw new Error('No se pudo cargar el listado.');
+
+                        const datos = await respuesta.json();
+                        this.usuarios = datos.items;
+                        this.totalPaginas = datos.totalPaginas;
+                    } catch (e) {
+                        this.error = e.message;
+                    } finally {
+                        this.cargando = false;
+                    }
+                },
+                irAPagina(nuevaPagina) {
+                    if (nuevaPagina < 1 || nuevaPagina > this.totalPaginas) return;
+                    this.pagina = nuevaPagina;
+                    this.cargar();
+                }
+            },
+            mounted() {
+                this.cargar();
+            }
+        }).mount('#app');
+    </script>
+}
+
