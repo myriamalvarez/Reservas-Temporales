@@ -8,13 +8,16 @@ namespace Reservas_Temporales.Controllers
     [AllowAnonymous]
     public class AccountController : Controller
     {
-        private readonly RepositorioUsuario _repositorioUsuario;
+        private readonly IRepositorioUsuario _repositorioUsuario;
         private readonly TokenService _tokenService;
+        private readonly PasswordHasher _passwordHasher;
 
-        public AccountController(RepositorioUsuario repositorioUsuario, TokenService tokenService)
+        public AccountController(
+            IRepositorioUsuario repositorioUsuario, TokenService tokenService, PasswordHasher passwordHasher)
         {
             _repositorioUsuario = repositorioUsuario;
             _tokenService = tokenService;
+            _passwordHasher = passwordHasher;
         }
 
         public IActionResult Login(string? returnUrl = null)
@@ -30,7 +33,7 @@ namespace Reservas_Temporales.Controllers
             ViewBag.ReturnUrl = returnUrl;
 
             var usuario = await _repositorioUsuario.ObtenerPorEmailAsync(email);
-            if (usuario == null || !usuario.Activo || !PasswordHasher.Verificar(password, usuario.Password))
+            if (usuario == null || !usuario.Activo || !_passwordHasher.Verificar(password, usuario.Password))
             {
                 ModelState.AddModelError(string.Empty, "Email o contraseña incorrectos.");
                 return View();

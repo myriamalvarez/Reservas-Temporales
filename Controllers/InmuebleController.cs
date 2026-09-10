@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Reservas_Temporales.Models;
@@ -8,16 +9,16 @@ namespace Reservas_Temporales.Controllers
 {
     public class InmuebleController : ControladorBase
     {
-        private readonly RepositorioInmueble _repositorioInmueble;
-        private readonly RepositorioPropietario _repositorioPropietario;
-        private readonly RepositorioTipoInmueble _repositorioTipoInmueble;
-        private readonly RepositorioImagenInmueble _repositorioImagenInmueble;
+        private readonly IRepositorioInmueble _repositorioInmueble;
+        private readonly IRepositorioPropietario _repositorioPropietario;
+        private readonly IRepositorioTipoInmueble _repositorioTipoInmueble;
+        private readonly IRepositorioImagenInmueble _repositorioImagenInmueble;
 
         public InmuebleController(
-            RepositorioInmueble repositorioInmueble,
-            RepositorioPropietario repositorioPropietario,
-            RepositorioTipoInmueble repositorioTipoInmueble,
-            RepositorioImagenInmueble repositorioImagenInmueble)
+            IRepositorioInmueble repositorioInmueble,
+            IRepositorioPropietario repositorioPropietario,
+            IRepositorioTipoInmueble repositorioTipoInmueble,
+            IRepositorioImagenInmueble repositorioImagenInmueble)
         {
             _repositorioInmueble = repositorioInmueble;
             _repositorioPropietario = repositorioPropietario;
@@ -133,10 +134,9 @@ namespace Reservas_Temporales.Controllers
         // Baja lógica: solo un administrador puede eliminar entidades.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Eliminar(int id)
         {
-            if (!EsAdministrador) return Forbid();
-
             await _repositorioInmueble.EliminarAsync(id);
             TempData["Mensaje"] = "Inmueble eliminado.";
             return RedirectToAction(nameof(Index));

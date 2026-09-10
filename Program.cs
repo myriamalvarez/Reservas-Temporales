@@ -47,22 +47,32 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 context.Response.Redirect("/Account/AccesoDenegado");
                 return Task.CompletedTask;
+            },
+            // Útiles solo para debug durante el desarrollo (ver la consola donde corre `dotnet run`).
+            OnAuthenticationFailed = context =>
+            {
+                Console.WriteLine("Error validando el token JWT: " + context.Exception.Message);
+                return Task.CompletedTask;
+            },
+            OnTokenValidated = context =>
+            {
+                Console.WriteLine("Token válido para: " + context.Principal?.Identity?.Name);
+                return Task.CompletedTask;
             }
         };
     });
 
 builder.Services.AddScoped<ConexionBD>();
-builder.Services.AddScoped<RepositorioUsuario>();
-builder.Services.AddScoped<RepositorioPropietario>();
-builder.Services.AddScoped<RepositorioInquilino>();
-builder.Services.AddScoped<RepositorioTipoInmueble>();
-builder.Services.AddScoped<RepositorioInmueble>();
-builder.Services.AddScoped<RepositorioImagenInmueble>();
-builder.Services.AddScoped<RepositorioReserva>();
-builder.Services.AddScoped<RepositorioPago>();
+builder.Services.AddScoped<IRepositorioUsuario, RepositorioUsuario>();
+builder.Services.AddScoped<IRepositorioPropietario, RepositorioPropietario>();
+builder.Services.AddScoped<IRepositorioInquilino, RepositorioInquilino>();
+builder.Services.AddScoped<IRepositorioTipoInmueble, RepositorioTipoInmueble>();
+builder.Services.AddScoped<IRepositorioInmueble, RepositorioInmueble>();
+builder.Services.AddScoped<IRepositorioImagenInmueble, RepositorioImagenInmueble>();
+builder.Services.AddScoped<IRepositorioReserva, RepositorioReserva>();
+builder.Services.AddScoped<IRepositorioPago, RepositorioPago>();
 builder.Services.AddScoped<RepositorioInformes>();
-builder.Services.AddDistributedMemoryCache();
-builder.Services.AddSession();
+builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Administrador", policy => policy.RequireRole("Administrador"));
@@ -84,6 +94,13 @@ if (!app.Environment.IsDevelopment())
 
 
 app.UseHttpsRedirection();
+
+// UseStaticFiles sirve cualquier archivo de wwwroot en el momento (incluidas las imágenes
+// subidas en runtime, como /uploads/...). MapStaticAssets, más abajo, solo optimiza y sirve
+// los archivos que ya existían al compilar (CSS, JS, imágenes del proyecto) — por eso conviven
+// los dos: uno para lo estático de siempre, otro para lo que se sube después.
+app.UseStaticFiles();
+
 app.UseRouting();
 
 app.UseAuthentication();

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
@@ -8,9 +9,9 @@ namespace Reservas_Temporales.Controllers
     // por eso todas las acciones redirigen de vuelta a Reserva/Details.
     public class PagoController : ControladorBase
     {
-        private readonly RepositorioPago _repositorioPago;
+        private readonly IRepositorioPago _repositorioPago;
 
-        public PagoController(RepositorioPago repositorioPago)
+        public PagoController(IRepositorioPago repositorioPago)
         {
             _repositorioPago = repositorioPago;
         }
@@ -41,10 +42,9 @@ namespace Reservas_Temporales.Controllers
         // Solo un administrador puede eliminar/anular entidades.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Anular(int id, int idReserva)
         {
-            if (!EsAdministrador) return Forbid();
-
             var usuarioId = UsuarioActualId ?? throw new InvalidOperationException("No hay un usuario en sesión.");
             await _repositorioPago.AnularAsync(id, usuarioId);
             TempData["Mensaje"] = "Pago anulado.";

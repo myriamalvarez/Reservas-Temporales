@@ -13,11 +13,11 @@ namespace Reservas_Temporales.Controllers
         private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".webp" };
         private const long TamanioMaximoBytes = 5 * 1024 * 1024; // 5 MB
 
-        private readonly RepositorioImagenInmueble _repositorioImagenInmueble;
+        private readonly IRepositorioImagenInmueble _repositorioImagenInmueble;
         private readonly IWebHostEnvironment _entorno;
 
         public ImagenInmuebleController(
-            RepositorioImagenInmueble repositorioImagenInmueble, IWebHostEnvironment entorno)
+            IRepositorioImagenInmueble repositorioImagenInmueble, IWebHostEnvironment entorno)
         {
             _repositorioImagenInmueble = repositorioImagenInmueble;
             _entorno = entorno;

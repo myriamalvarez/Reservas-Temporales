@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Reservas_Temporales.Models;
@@ -8,14 +9,14 @@ namespace Reservas_Temporales.Controllers
 {
     public class ReservaController : ControladorBase
     {
-        private readonly RepositorioReserva _repositorioReserva;
-        private readonly RepositorioPago _repositorioPago;
-        private readonly RepositorioInquilino _repositorioInquilino;
+        private readonly IRepositorioReserva _repositorioReserva;
+        private readonly IRepositorioPago _repositorioPago;
+        private readonly IRepositorioInquilino _repositorioInquilino;
 
         public ReservaController(
-            RepositorioReserva repositorioReserva,
-            RepositorioPago repositorioPago,
-            RepositorioInquilino repositorioInquilino)
+            IRepositorioReserva repositorioReserva,
+            IRepositorioPago repositorioPago,
+            IRepositorioInquilino repositorioInquilino)
         {
             _repositorioReserva = repositorioReserva;
             _repositorioPago = repositorioPago;
@@ -161,10 +162,9 @@ namespace Reservas_Temporales.Controllers
         // Baja lógica: solo un administrador puede eliminar entidades.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Eliminar(int id)
         {
-            if (!EsAdministrador) return Forbid();
-
             await _repositorioReserva.EliminarAsync(id);
             TempData["Mensaje"] = "Reserva eliminada.";
             return RedirectToAction(nameof(Index));

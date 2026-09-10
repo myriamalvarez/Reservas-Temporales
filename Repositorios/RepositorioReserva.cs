@@ -4,7 +4,7 @@ using Reservas_Temporales.ViewModels;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioReserva
+    public class RepositorioReserva : IRepositorioReserva
     {
         private readonly ConexionBD _conexionBD;
 

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
@@ -7,9 +8,9 @@ namespace Reservas_Temporales.Controllers
 {
     public class PropietarioController : ControladorBase
     {
-        private readonly RepositorioPropietario _repositorioPropietario;
+        private readonly IRepositorioPropietario _repositorioPropietario;
 
-        public PropietarioController(RepositorioPropietario repositorioPropietario)
+        public PropietarioController(IRepositorioPropietario repositorioPropietario)
         {
             _repositorioPropietario = repositorioPropietario;
         }
@@ -71,10 +72,9 @@ namespace Reservas_Temporales.Controllers
         // Baja lógica: solo un administrador puede eliminar entidades.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Policy = "Administrador")]
         public async Task<IActionResult> Eliminar(int id)
         {
-            if (!EsAdministrador) return Forbid();
-
             await _repositorioPropietario.EliminarAsync(id);
             TempData["Mensaje"] = "Propietario eliminado.";
             return RedirectToAction(nameof(Index));

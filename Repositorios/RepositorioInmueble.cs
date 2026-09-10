@@ -3,7 +3,7 @@ using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioInmueble
+    public class RepositorioInmueble : IRepositorioInmueble
     {
         private readonly ConexionBD _conexionBD;
 

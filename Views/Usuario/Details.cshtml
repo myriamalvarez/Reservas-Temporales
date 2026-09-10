@@ -3,8 +3,23 @@
     ViewData["Title"] = "Perfil de usuario";
 }
 
-<h1>@Model.Nombre @Model.Apellido</h1>
-<p class="text-muted">@Model.NombreUsuario · @Model.Rol</p>
+<div class="d-flex align-items-center gap-3 mb-3">
+    @{
+        var avatarSrc = string.IsNullOrEmpty(Model.Avatar)
+            ? $"https://ui-avatars.com/api/?name={Model.Nombre}+{Model.Apellido}&background=6c757d&color=fff"
+            : Model.Avatar;
+    }
+    <img src="@avatarSrc" class="rounded-circle border" style="width:80px;height:80px;object-fit:cover;" />
+    <div>
+        <h1 class="mb-0">@Model.Nombre @Model.Apellido</h1>
+        <p class="text-muted mb-0">@Model.NombreUsuario · @Model.Rol</p>
+    </div>
+</div>
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger">@TempData["Error"]</div>
+}
 
 <ul class="list-group mb-4">
     <li class="list-group-item"><strong>Email:</strong> @Model.Email</li>
@@ -21,16 +36,101 @@
     <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Editar perfil</a>
 </div>
 
-<h5>Cambiar contraseña</h5>
-<form asp-action="CambiarPassword" method="post" class="row g-2 align-items-end">
-    <input type="hidden" name="id" value="@Model.Id" />
-    <div class="col-md-4">
-        <input type="password" name="nuevaPassword" class="form-control" placeholder="Nueva contraseña" required minlength="6" />
+<div class="row">
+    <div class="col-md-6">
+        <h5>Avatar</h5>
+        <form asp-action="SubirAvatar" method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center mb-2">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <input type="file" name="archivo" accept=".jpg,.jpeg,.png,.webp" class="form-control" required />
+            <button type="submit" class="btn btn-primary text-nowrap">Subir</button>
+        </form>
+        @if (!string.IsNullOrEmpty(Model.Avatar))
+        {
+            <form asp-action="EliminarAvatar" method="post" onsubmit="return confirm('¿Quitar el avatar?');">
+                <input type="hidden" name="id" value="@Model.Id" />
+                <button type="submit" class="btn btn-sm btn-outline-danger">Quitar avatar</button>
+            </form>
+        }
     </div>
-    <div class="col-md-3">
-        <button type="submit" class="btn btn-outline-primary">Actualizar contraseña</button>
+
+    <div class="col-md-6">
+        <h5>Cambiar contraseña</h5>
+        <form asp-action="CambiarPassword" method="post" class="row g-2" id="formPassword">
+            <input type="hidden" name="id" value="@Model.Id" />
+
+            @if (Model.Id == ViewBag.UsuarioActualId)
+            {
+                <div class="col-12">
+                    <div class="input-group">
+                        <input type="password" id="passwordActual" name="passwordActual" class="form-control"
+                               placeholder="Contraseña actual" required />
+                        <button class="btn btn-outline-secondary" type="button" onclick="alternarVisibilidad('passwordActual', this)">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+
+            <div class="col-12">
+                <div class="input-group">
+                    <input type="password" id="nuevaPassword" name="nuevaPassword" class="form-control"
+                           placeholder="Nueva contraseña" required minlength="6" oninput="validarCoincidencia()" />
+                    <button class="btn btn-outline-secondary" type="button" onclick="alternarVisibilidad('nuevaPassword', this)">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-12">
+                <div class="input-group">
+                    <input type="password" id="confirmarPassword" name="confirmarPassword" class="form-control"
+                           placeholder="Repetir contraseña" required minlength="6" oninput="validarCoincidencia()" />
+                    <button class="btn btn-outline-secondary" type="button" onclick="alternarVisibilidad('confirmarPassword', this)">
+                        <i class="bi bi-eye"></i>
+                    </button>
+                </div>
+                <div id="mensajeCoincidencia" class="form-text"></div>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-outline-primary" id="btnGuardarPassword">Actualizar contraseña</button>
+            </div>
+        </form>
     </div>
-</form>
+
+    @section Scripts {
+        <script>
+            function alternarVisibilidad(inputId, boton) {
+                const input = document.getElementById(inputId);
+                const icono = boton.querySelector('i');
+                const mostrar = input.type === 'password';
+                input.type = mostrar ? 'text' : 'password';
+                icono.classList.toggle('bi-eye', !mostrar);
+                icono.classList.toggle('bi-eye-slash', mostrar);
+            }
+
+            function validarCoincidencia() {
+                const nueva = document.getElementById('nuevaPassword').value;
+                const confirmar = document.getElementById('confirmarPassword').value;
+                const mensaje = document.getElementById('mensajeCoincidencia');
+                const boton = document.getElementById('btnGuardarPassword');
+
+                if (!confirmar) {
+                    mensaje.textContent = '';
+                    boton.disabled = false;
+                    return;
+                }
+                if (nueva === confirmar) {
+                    mensaje.textContent = 'Las contraseñas coinciden.';
+                    mensaje.className = 'form-text text-success';
+                    boton.disabled = false;
+                } else {
+                    mensaje.textContent = 'Las contraseñas no coinciden.';
+                    mensaje.className = 'form-text text-danger';
+                    boton.disabled = true;
+                }
+            }
+        </script>
+    }
+</div>
 
 @if (User.IsInRole("Administrador"))
 {

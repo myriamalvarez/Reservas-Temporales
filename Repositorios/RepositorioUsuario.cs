@@ -3,7 +3,7 @@ using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioUsuario
+    public class RepositorioUsuario : IRepositorioUsuario
     {
         private readonly ConexionBD _conexionBD;
 
@@ -128,6 +128,19 @@ namespace Reservas_Temporales.Repositorios
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
             comando.Parameters.AddWithValue("@password", nuevoHashPassword);
+            await conexion.OpenAsync();
+            await comando.ExecuteNonQueryAsync();
+        }
+
+        // Actualiza solo el avatar (ruta relativa dentro de wwwroot, o null para quitarlo),
+        // sin tocar el resto de los campos del usuario.
+        public async Task ActualizarAvatarAsync(int id, string? avatarPath)
+        {
+            using var conexion = _conexionBD.ObtenerConexion();
+            var sql = "UPDATE usuario SET avatar = @avatar WHERE id = @id";
+            using var comando = new MySqlCommand(sql, conexion);
+            comando.Parameters.AddWithValue("@id", id);
+            comando.Parameters.AddWithValue("@avatar", (object?)avatarPath ?? DBNull.Value);
             await conexion.OpenAsync();
             await comando.ExecuteNonQueryAsync();
         }

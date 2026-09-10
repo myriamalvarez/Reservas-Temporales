@@ -7,10 +7,10 @@ namespace Reservas_Temporales.Controllers
 {
     public class HomeController : ControladorBase
     {
-        private readonly RepositorioInmueble _repositorioInmueble;
-        private readonly RepositorioReserva _repositorioReserva;
+        private readonly IRepositorioInmueble _repositorioInmueble;
+        private readonly IRepositorioReserva _repositorioReserva;
 
-        public HomeController(RepositorioInmueble repositorioInmueble, RepositorioReserva repositorioReserva)
+        public HomeController(IRepositorioInmueble repositorioInmueble, IRepositorioReserva repositorioReserva)
         {
             _repositorioInmueble = repositorioInmueble;
             _repositorioReserva = repositorioReserva;
