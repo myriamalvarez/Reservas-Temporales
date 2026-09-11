@@ -1,10 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
-using Reservas_Temporales.Seguridad;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Reservas_Temporales.Controllers
 {
@@ -12,18 +17,77 @@ namespace Reservas_Temporales.Controllers
     {
         private static readonly string[] ExtensionesPermitidas = { ".jpg", ".jpeg", ".png", ".webp" };
         private const long TamanioMaximoBytes = 2 * 1024 * 1024; // 2 MB, alcanza para un avatar
+        private const int IteracionesHash = 100_000;
+        private const int LargoHashBytes = 32; // 256 bits
 
         private readonly IRepositorioUsuario _repositorioUsuario;
-        private readonly PasswordHasher _passwordHasher;
         private readonly IWebHostEnvironment _entorno;
+        private readonly IConfiguration _configuration;
 
         public UsuarioController(
-            IRepositorioUsuario repositorioUsuario, PasswordHasher passwordHasher, IWebHostEnvironment entorno)
+            IRepositorioUsuario repositorioUsuario, IWebHostEnvironment entorno, IConfiguration configuration)
         {
             _repositorioUsuario = repositorioUsuario;
-            _passwordHasher = passwordHasher;
             _entorno = entorno;
+            _configuration = configuration;
         }
+
+        // ------------------------------------------------------------------
+        // Login / Logout
+        // ------------------------------------------------------------------
+
+        [AllowAnonymous]
+        public IActionResult Login(string? returnUrl = null)
+        {
+            ViewBag.ReturnUrl = returnUrl;
+            return View();
+        }
+
+        [AllowAnonymous]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Login(string email, string password, string? returnUrl = null)
+        {
+            ViewBag.ReturnUrl = returnUrl;
+
+            var usuario = await _repositorioUsuario.ObtenerPorEmailAsync(email);
+            if (usuario == null || !usuario.Activo || !VerificarPassword(password, usuario.Password))
+            {
+                ModelState.AddModelError(string.Empty, "Email o contraseña incorrectos.");
+                return View();
+            }
+
+            var token = GenerarToken(usuario);
+
+            // El JWT va en una cookie HttpOnly (no accesible desde JS) para que el navegador
+            // lo mande solo en cada request; el middleware de JwtBearer lo lee de ahí (ver Program.cs).
+            Response.Cookies.Append("access_token", token, new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = Request.IsHttps,
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTimeOffset.Now.AddHours(8)
+            });
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        [AllowAnonymous]
+        public IActionResult Logout()
+        {
+            Response.Cookies.Delete("access_token");
+            return RedirectToAction(nameof(Login));
+        }
+
+        [AllowAnonymous]
+        public IActionResult AccesoDenegado() => View();
+
+        // ------------------------------------------------------------------
+        // ABM de usuarios
+        // ------------------------------------------------------------------
 
         // Solo los administradores gestionan la lista completa de usuarios.
         [Authorize(Policy = "Administrador")]
@@ -82,7 +146,7 @@ namespace Reservas_Temporales.Controllers
             ModelState.Remove(nameof(Usuario.Password));
             if (!ModelState.IsValid) return View(usuario);
 
-            usuario.Password = _passwordHasher.Hashear(password);
+            usuario.Password = HashearPassword(password);
 
             var id = await _repositorioUsuario.CrearAsync(usuario);
             TempData["Mensaje"] = "Usuario creado correctamente.";
@@ -144,7 +208,7 @@ namespace Reservas_Temporales.Controllers
             if (usuario == null) return NotFound();
 
             var esPropioPerfil = id == UsuarioActualId;
-            if (esPropioPerfil && !_passwordHasher.Verificar(passwordActual ?? string.Empty, usuario.Password))
+            if (esPropioPerfil && !VerificarPassword(passwordActual ?? string.Empty, usuario.Password))
             {
                 TempData["Error"] = "La contraseña actual no es correcta.";
                 return RedirectToAction(nameof(Details), new { id });
@@ -162,7 +226,7 @@ namespace Reservas_Temporales.Controllers
                 return RedirectToAction(nameof(Details), new { id });
             }
 
-            await _repositorioUsuario.ActualizarPasswordAsync(id, _passwordHasher.Hashear(nuevaPassword));
+            await _repositorioUsuario.ActualizarPasswordAsync(id, HashearPassword(nuevaPassword));
             TempData["Mensaje"] = "Contraseña actualizada.";
             return RedirectToAction(nameof(Details), new { id });
         }
@@ -245,6 +309,56 @@ namespace Reservas_Temporales.Controllers
             await _repositorioUsuario.EliminarAsync(id);
             TempData["Mensaje"] = "Usuario eliminado.";
             return RedirectToAction(nameof(Index));
+        }
+
+        // ------------------------------------------------------------------
+        // Seguridad: hashing de contraseña y generación del JWT.
+        // Antes vivían en clases aparte (Seguridad/PasswordHasher y Seguridad/TokenService);
+        // se dejan acá como métodos privados para que todo el flujo de usuario quede en un
+        // solo archivo, como en el resto del curso.
+        // ------------------------------------------------------------------
+
+        private string HashearPassword(string password)
+        {
+            var salt = _configuration["Salt"]
+                ?? throw new InvalidOperationException("Falta configurar \"Salt\" en appsettings.json.");
+
+            var hash = Rfc2898DeriveBytes.Pbkdf2(
+                password: Encoding.UTF8.GetBytes(password),
+                salt: Encoding.UTF8.GetBytes(salt),
+                iterations: IteracionesHash,
+                hashAlgorithm: HashAlgorithmName.SHA256,
+                outputLength: LargoHashBytes);
+
+            return Convert.ToBase64String(hash);
+        }
+
+        private bool VerificarPassword(string password, string hashAlmacenado) =>
+            HashearPassword(password) == hashAlmacenado;
+
+        private string GenerarToken(Usuario usuario)
+        {
+            var key = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(_configuration["TokenAuthentication:SecretKey"]!));
+            var credenciales = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            // ClaimTypes.NameIdentifier guarda el Id: lo usa ControladorBase para saber quién está logueado.
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                new(ClaimTypes.Name, usuario.Email),
+                new("FullName", $"{usuario.Nombre} {usuario.Apellido}"),
+                new(ClaimTypes.Role, usuario.Rol.ToString())
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _configuration["TokenAuthentication:Issuer"],
+                audience: _configuration["TokenAuthentication:Audience"],
+                claims: claims,
+                expires: DateTime.Now.AddHours(8),
+                signingCredentials: credenciales);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }

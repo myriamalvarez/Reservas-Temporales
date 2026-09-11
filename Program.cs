@@ -2,14 +2,11 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Reservas_Temporales.Repositorios;
-using Reservas_Temporales.Seguridad;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
-
-builder.Services.AddScoped<TokenService>();
 
 // Add JWT authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -40,12 +37,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 context.HandleResponse();
                 var returnUrl = Uri.EscapeDataString(context.Request.Path + context.Request.QueryString);
-                context.Response.Redirect($"/Account/Login?returnUrl={returnUrl}");
+                context.Response.Redirect($"/Usuario/Login?returnUrl={returnUrl}");
                 return Task.CompletedTask;
             },
             OnForbidden = context =>
             {
-                context.Response.Redirect("/Account/AccesoDenegado");
+                context.Response.Redirect("/Usuario/AccesoDenegado");
                 return Task.CompletedTask;
             },
             // Útiles solo para debug durante el desarrollo (ver la consola donde corre `dotnet run`).
@@ -71,11 +68,10 @@ builder.Services.AddScoped<IRepositorioImagenInmueble, RepositorioImagenInmueble
 builder.Services.AddScoped<IRepositorioReserva, RepositorioReserva>();
 builder.Services.AddScoped<IRepositorioPago, RepositorioPago>();
 builder.Services.AddScoped<RepositorioInformes>();
-builder.Services.AddSingleton<PasswordHasher>();
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy("Administrador", policy => policy.RequireRole("Administrador"));
-    // Exige login en TODAS las acciones salvo las marcadas [AllowAnonymous] (como AccountController.Login).
+    // Exige login en TODAS las acciones salvo las marcadas [AllowAnonymous] (como UsuarioController.Login).
     options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();

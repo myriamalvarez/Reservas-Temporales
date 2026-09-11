@@ -5,7 +5,7 @@ using Reservas_Temporales.Models;
 namespace Reservas_Temporales.Controllers
 {
     // Centraliza el acceso a los datos del usuario logueado, leídos desde los claims del JWT
-    // (ver AccountController y la configuración de JwtBearer en Program.cs).
+    // (ver UsuarioController.Login y la configuración de JwtBearer en Program.cs).
     public abstract class ControladorBase : Controller
     {
         protected int? UsuarioActualId
