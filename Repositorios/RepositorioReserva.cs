@@ -1,16 +1,14 @@
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.ViewModels;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioReserva : IRepositorioReserva
+    public class RepositorioReserva : RepositorioBase, IRepositorioReserva
     {
-        private readonly ConexionBD _conexionBD;
-
-        public RepositorioReserva(ConexionBD conexionBD)
+        public RepositorioReserva(IConfiguration configuration) : base(configuration)
         {
-            _conexionBD = conexionBD;
         }
 
         private const string SqlBase =
@@ -29,7 +27,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<Reserva?> ObtenerPorIdAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -42,7 +40,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<List<Reserva>> ListarVigentesAsync()
         {
             var reservas = new List<Reserva>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE activo = 1 AND estado = 'vigente' " +
                       "AND CURDATE() BETWEEN fecha_desde AND fecha_hasta ORDER BY fecha_hasta";
             using var comando = new MySqlCommand(sql, conexion);
@@ -63,7 +61,7 @@ namespace Reservas_Temporales.Repositorios
             const string condicion =
                 "r.activo = 1 AND r.estado = 'vigente' AND CURDATE() BETWEEN r.fecha_desde AND r.fecha_hasta";
 
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             await conexion.OpenAsync();
 
             var sqlTotal = "SELECT COUNT(*) FROM reserva r WHERE " + condicion;
@@ -99,7 +97,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<List<Reserva>> ListarQueTerminanEnXDiasAsync(int dias)
         {
             var reservas = new List<Reserva>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE activo = 1 AND estado = 'vigente' " +
                       "AND fecha_hasta BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL @dias DAY) " +
                       "ORDER BY fecha_hasta";
@@ -115,7 +113,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<List<Reserva>> ListarPorInmuebleAsync(int idInmueble)
         {
             var reservas = new List<Reserva>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE id_inmueble = @idInmueble AND activo = 1 ORDER BY fecha_desde DESC";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@idInmueble", idInmueble);
@@ -129,7 +127,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<List<Reserva>> ListarPorInquilinoAsync(int idInquilino)
         {
             var reservas = new List<Reserva>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE id_inquilino = @idInquilino AND activo = 1 ORDER BY fecha_desde DESC";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@idInquilino", idInquilino);
@@ -145,7 +143,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<bool> ExisteSolapamientoAsync(
             int idInmueble, DateTime fechaDesde, DateTime fechaHasta, int? idReservaExcluir = null)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "SELECT COUNT(*) FROM reserva WHERE id_inmueble = @idInmueble AND activo = 1 " +
                       "AND estado <> 'finalizada_anticipada' " +
                       "AND fecha_desde <= @fechaHasta AND fecha_hasta >= @fechaDesde" +
@@ -163,7 +161,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<int> CrearAsync(Reserva reserva)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "INSERT INTO reserva (id_inmueble, id_inquilino, fecha_desde, fecha_hasta, " +
                       "fecha_hasta_original, monto_diario, estado, creado_por_user_id, activo) " +
                       "VALUES (@idInmueble, @idInquilino, @fechaDesde, @fechaHasta, @fechaHastaOriginal, " +
@@ -187,7 +185,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task TerminarAnticipadamenteAsync(
             int id, DateTime fechaTerminacion, decimal multa, int usuarioId)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE reserva SET fecha_hasta = @fechaTerminacion, fecha_terminacion = @fechaTerminacion, " +
                       "multa = @multa, estado = 'finalizada_anticipada', terminado_por_user_id = @usuarioId " +
                       "WHERE id = @id";
@@ -203,7 +201,7 @@ namespace Reservas_Temporales.Repositorios
         // Marca una reserva como finalizada en término (job/proceso batch, o al consultarla vencida).
         public async Task FinalizarAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE reserva SET estado = 'finalizada' WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -214,7 +212,7 @@ namespace Reservas_Temporales.Repositorios
         // Baja lógica: el controller debe validar que quien la invoca es administrador.
         public async Task EliminarAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE reserva SET activo = 0 WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);

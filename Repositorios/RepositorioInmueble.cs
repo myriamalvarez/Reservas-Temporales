@@ -1,15 +1,13 @@
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioInmueble : IRepositorioInmueble
+    public class RepositorioInmueble : RepositorioBase, IRepositorioInmueble
     {
-        private readonly ConexionBD _conexionBD;
-
-        public RepositorioInmueble(ConexionBD conexionBD)
+        public RepositorioInmueble(IConfiguration configuration) : base(configuration)
         {
-            _conexionBD = conexionBD;
         }
 
         // Trae también nombre del propietario y del tipo, útil para listados (informe: inmuebles + dueño).
@@ -26,7 +24,7 @@ namespace Reservas_Temporales.Repositorios
             bool soloActivos = true, EstadoInmueble? estado = null, int? idPropietario = null)
         {
             var inmuebles = new List<Inmueble>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var condiciones = new List<string>();
             if (soloActivos) condiciones.Add("i.activo = 1");
             if (estado.HasValue) condiciones.Add("i.estado = @estado");
@@ -64,7 +62,7 @@ namespace Reservas_Temporales.Repositorios
             if (idPropietario.HasValue) condiciones.Add("i.id_propietario = @idPropietario");
             var whereSql = condiciones.Count > 0 ? " WHERE " + string.Join(" AND ", condiciones) : "";
 
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             await conexion.OpenAsync();
 
             void AgregarFiltros(MySqlCommand comandoAAgregar)
@@ -96,7 +94,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<Inmueble?> ObtenerPorIdAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + " WHERE i.id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -111,7 +109,7 @@ namespace Reservas_Temporales.Repositorios
             DateTime fechaDesde, DateTime fechaHasta, int? cupoMinimo = null, int? idTipo = null)
         {
             var inmuebles = new List<Inmueble>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
 
             var condiciones = new List<string>
             {
@@ -141,7 +139,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<int> CrearAsync(Inmueble inmueble)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "INSERT INTO inmueble (id_propietario, id_tipo, direccion, cupo, coord, precio_dia, " +
                       "porcentaje_sena, estado, activo) " +
                       "VALUES (@idPropietario, @idTipo, @direccion, @cupo, @coord, @precioDia, " +
@@ -156,7 +154,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task ActualizarAsync(Inmueble inmueble)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE inmueble SET id_propietario = @idPropietario, id_tipo = @idTipo, " +
                       "direccion = @direccion, cupo = @cupo, coord = @coord, precio_dia = @precioDia, " +
                       "porcentaje_sena = @porcentajeSena, estado = @estado, activo = @activo WHERE id = @id";
@@ -170,7 +168,7 @@ namespace Reservas_Temporales.Repositorios
         // El propietario suspende/reactiva la oferta sin afectar reservas ya creadas.
         public async Task CambiarEstadoAsync(int id, EstadoInmueble estado)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE inmueble SET estado = @estado WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -182,7 +180,7 @@ namespace Reservas_Temporales.Repositorios
         // Baja lógica: el controller debe validar que quien la invoca es administrador.
         public async Task EliminarAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE inmueble SET activo = 0 WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);

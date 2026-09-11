@@ -1,15 +1,13 @@
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioUsuario : IRepositorioUsuario
+    public class RepositorioUsuario : RepositorioBase, IRepositorioUsuario
     {
-        private readonly ConexionBD _conexionBD;
-
-        public RepositorioUsuario(ConexionBD conexionBD)
+        public RepositorioUsuario(IConfiguration configuration) : base(configuration)
         {
-            _conexionBD = conexionBD;
         }
 
         private const string ColumnasBase =
@@ -18,7 +16,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<List<Usuario>> ListarAsync(bool soloActivos = true)
         {
             var usuarios = new List<Usuario>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = $"SELECT {ColumnasBase} FROM usuario" +
                       (soloActivos ? " WHERE activo = 1" : "") +
                       " ORDER BY apellido, nombre";
@@ -39,7 +37,7 @@ namespace Reservas_Temporales.Repositorios
 
             var whereSql = soloActivos ? " WHERE activo = 1" : "";
 
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             await conexion.OpenAsync();
 
             var sqlTotal = "SELECT COUNT(*) FROM usuario" + whereSql;
@@ -62,7 +60,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<Usuario?> ObtenerPorIdAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = $"SELECT {ColumnasBase} FROM usuario WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -73,7 +71,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<Usuario?> ObtenerPorEmailAsync(string email)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = $"SELECT {ColumnasBase} FROM usuario WHERE email = @email";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@email", email);
@@ -84,7 +82,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<int> CrearAsync(Usuario usuario)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "INSERT INTO usuario (nombre_usuario, nombre, apellido, email, password, avatar, rol, activo) " +
                       "VALUES (@nombreUsuario, @nombre, @apellido, @email, @password, @avatar, @rol, @activo); " +
                       "SELECT LAST_INSERT_ID();";
@@ -105,7 +103,7 @@ namespace Reservas_Temporales.Repositorios
         // No incluye Password a propósito: el cambio de contraseña se hace con ActualizarPasswordAsync.
         public async Task ActualizarAsync(Usuario usuario)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE usuario SET nombre_usuario = @nombreUsuario, nombre = @nombre, apellido = @apellido, " +
                       "email = @email, avatar = @avatar, rol = @rol, activo = @activo WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
@@ -123,7 +121,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task ActualizarPasswordAsync(int id, string nuevoHashPassword)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE usuario SET password = @password WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -136,7 +134,7 @@ namespace Reservas_Temporales.Repositorios
         // sin tocar el resto de los campos del usuario.
         public async Task ActualizarAvatarAsync(int id, string? avatarPath)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE usuario SET avatar = @avatar WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -148,7 +146,7 @@ namespace Reservas_Temporales.Repositorios
         // Baja lógica: el controller debe validar que quien la invoca es administrador.
         public async Task EliminarAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE usuario SET activo = 0 WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);

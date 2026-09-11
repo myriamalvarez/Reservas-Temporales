@@ -1,21 +1,19 @@
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioTipoInmueble : IRepositorioTipoInmueble
+    public class RepositorioTipoInmueble : RepositorioBase, IRepositorioTipoInmueble
     {
-        private readonly ConexionBD _conexionBD;
-
-        public RepositorioTipoInmueble(ConexionBD conexionBD)
+        public RepositorioTipoInmueble(IConfiguration configuration) : base(configuration)
         {
-            _conexionBD = conexionBD;
         }
 
         public async Task<List<TipoInmueble>> ListarAsync(bool soloActivos = true)
         {
             var tipos = new List<TipoInmueble>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "SELECT id, nombre, activo FROM tipo_inmueble" +
                       (soloActivos ? " WHERE activo = 1" : "") +
                       " ORDER BY nombre";
@@ -33,7 +31,7 @@ namespace Reservas_Temporales.Repositorios
             if (pagina < 1) pagina = 1;
             if (tamanioPagina < 1) tamanioPagina = 10;
 
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             await conexion.OpenAsync();
 
             var sqlTotal = "SELECT COUNT(*) FROM tipo_inmueble";
@@ -56,7 +54,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<TipoInmueble?> ObtenerPorIdAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "SELECT id, nombre, activo FROM tipo_inmueble WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -67,7 +65,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<int> CrearAsync(TipoInmueble tipo)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "INSERT INTO tipo_inmueble (nombre, activo) VALUES (@nombre, @activo); " +
                       "SELECT LAST_INSERT_ID();";
             using var comando = new MySqlCommand(sql, conexion);
@@ -80,7 +78,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task ActualizarAsync(TipoInmueble tipo)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE tipo_inmueble SET nombre = @nombre, activo = @activo WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", tipo.Id);
@@ -93,7 +91,7 @@ namespace Reservas_Temporales.Repositorios
         // Baja lógica: el controller debe validar que quien la invoca es administrador.
         public async Task EliminarAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE tipo_inmueble SET activo = 0 WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);

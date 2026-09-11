@@ -1,15 +1,13 @@
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.Repositorios
 {
-    public class RepositorioPago : IRepositorioPago
+    public class RepositorioPago : RepositorioBase, IRepositorioPago
     {
-        private readonly ConexionBD _conexionBD;
-
-        public RepositorioPago(ConexionBD conexionBD)
+        public RepositorioPago(IConfiguration configuration) : base(configuration)
         {
-            _conexionBD = conexionBD;
         }
 
         private const string SqlBase =
@@ -20,7 +18,7 @@ namespace Reservas_Temporales.Repositorios
         public async Task<List<Pago>> ListarPorReservaAsync(int idReserva)
         {
             var pagos = new List<Pago>();
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE id_reserva = @idReserva ORDER BY fecha_pago";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@idReserva", idReserva);
@@ -33,7 +31,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<Pago?> ObtenerPorIdAsync(int id)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = SqlBase + "WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -44,7 +42,7 @@ namespace Reservas_Temporales.Repositorios
 
         public async Task<int> CrearAsync(Pago pago)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "INSERT INTO pago (id_reserva, concepto, fecha_pago, importe, anulado, creado_por_user_id) " +
                       "VALUES (@idReserva, @concepto, @fechaPago, @importe, 0, @creadoPor); " +
                       "SELECT LAST_INSERT_ID();";
@@ -62,7 +60,7 @@ namespace Reservas_Temporales.Repositorios
         // La narrativa solo permite editar el concepto: fecha e importe quedan fijos.
         public async Task ActualizarConceptoAsync(int id, string nuevoConcepto)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE pago SET concepto = @concepto WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
@@ -74,7 +72,7 @@ namespace Reservas_Temporales.Repositorios
         // La eliminación es un cambio de estado: el pago sigue visible, marcado como anulado.
         public async Task AnularAsync(int id, int usuarioId)
         {
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             var sql = "UPDATE pago SET anulado = 1, anulado_por_user_id = @usuarioId WHERE id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);

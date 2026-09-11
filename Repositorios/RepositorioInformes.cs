@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Reservas_Temporales.ViewModels;
 
@@ -5,13 +6,10 @@ namespace Reservas_Temporales.Repositorios
 {
     // Consultas de agregación para los informes de la narrativa. Separado de RepositorioInmueble
     // porque no son operaciones CRUD sobre una entidad sino reportes que combinan varias tablas.
-    public class RepositorioInformes
+    public class RepositorioInformes : RepositorioBase
     {
-        private readonly ConexionBD _conexionBD;
-
-        public RepositorioInformes(ConexionBD conexionBD)
+        public RepositorioInformes(IConfiguration configuration) : base(configuration)
         {
-            _conexionBD = conexionBD;
         }
 
         // Informe: inmuebles más reservados en los últimos N días (default 365).
@@ -22,7 +20,7 @@ namespace Reservas_Temporales.Repositorios
             if (pagina < 1) pagina = 1;
             if (tamanioPagina < 1) tamanioPagina = 10;
 
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             await conexion.OpenAsync();
 
             var sqlTotal = "SELECT COUNT(*) FROM inmueble WHERE activo = 1";
@@ -69,7 +67,7 @@ namespace Reservas_Temporales.Repositorios
             if (pagina < 1) pagina = 1;
             if (tamanioPagina < 1) tamanioPagina = 10;
 
-            using var conexion = _conexionBD.ObtenerConexion();
+            using var conexion = ObtenerConexion();
             await conexion.OpenAsync();
 
             const string subconsulta =
@@ -94,7 +92,10 @@ namespace Reservas_Temporales.Repositorios
                 "WHERE i.activo = 1 " +
                 "GROUP BY i.id, i.direccion, p.nombre, p.apellido " +
                 "HAVING ultima_reserva IS NULL OR ultima_reserva < DATE_SUB(CURDATE(), INTERVAL @dias DAY) " +
-                "ORDER BY ultima_reserva IS NULL DESC, ultima_reserva ASC " +
+                // MySQL no permite envolver un alias de función de agregación (MAX) en otra
+                // expresión dentro de ORDER BY (ni de HAVING en algunos casos). Alcanza con el
+                // alias "pelado": los NULL ya se ordenan primero por defecto en un ASC.
+                "ORDER BY ultima_reserva ASC " +
                 "LIMIT @tamanioPagina OFFSET @offset";
 
             using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
