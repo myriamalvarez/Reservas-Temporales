@@ -1,4 +1,5 @@
 using Reservas_Temporales.Models;
+using Reservas_Temporales.ViewModels;
 
 namespace Reservas_Temporales.Repositorios
 {
@@ -9,6 +10,10 @@ namespace Reservas_Temporales.Repositorios
     {
         // Informe: pagos de una reserva en particular.
         Task<List<Pago>> ListarPorReservaAsync(int idReserva);
+
+        // Listado general: todos los pagos, con filtro opcional por anulado.
+        Task<(List<PagoListadoItem> Items, int Total)> ListarTodosPaginadoAsync(
+            int pagina, int tamanioPagina, bool? anulado = null);
 
         // La narrativa solo permite editar el concepto: fecha e importe quedan fijos.
         Task ActualizarConceptoAsync(int id, string nuevoConcepto);

@@ -57,6 +57,34 @@ namespace Reservas_Temporales.Controllers
             return View(reservas);
         }
 
+        // Listado general de TODAS las reservas (cualquier estado), con filtro opcional.
+        // Es la forma de llegar a una reserva finalizada o finalizada anticipadamente
+        // sin tener que conocer su Id de antemano.
+        public IActionResult Todas() => View();
+
+        [HttpGet]
+        public async Task<IActionResult> TodasJson(int pagina = 1, int tamanioPagina = 10, EstadoReserva? estado = null)
+        {
+            var (items, total) = await _repositorioReserva.ListarTodasPaginadoAsync(pagina, tamanioPagina, estado);
+            return Json(new
+            {
+                items = items.Select(r => new
+                {
+                    r.Id,
+                    FechaDesde = r.FechaDesde.ToString("dd/MM/yyyy"),
+                    FechaHasta = r.FechaHasta.ToString("dd/MM/yyyy"),
+                    r.MontoDiario,
+                    Estado = r.Estado.ToString(),
+                    r.InmuebleDireccion,
+                    r.InquilinoNombre
+                }),
+                total,
+                pagina,
+                tamanioPagina,
+                totalPaginas = (int)Math.Ceiling(total / (double)tamanioPagina)
+            });
+        }
+
         public async Task<IActionResult> Details(int id)
         {
             var reserva = await _repositorioReserva.ObtenerPorIdAsync(id);

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
+using MySqlConnector;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
 using System.IdentityModel.Tokens.Jwt;
@@ -148,9 +149,22 @@ namespace Reservas_Temporales.Controllers
 
             usuario.Password = HashearPassword(password);
 
-            var id = await _repositorioUsuario.CrearAsync(usuario);
-            TempData["Mensaje"] = "Usuario creado correctamente.";
-            return RedirectToAction(nameof(Details), new { id });
+            try
+            {
+                var id = await _repositorioUsuario.CrearAsync(usuario);
+                TempData["Mensaje"] = "Usuario creado correctamente.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                // La tabla tiene UNIQUE tanto en email como en nombre_usuario; el mensaje del
+                // motor indica cuál de los dos chocó (viene en ex.Message, ej: "for key 'uq_usuario_email'").
+                var campo = ex.Message.Contains("email", StringComparison.OrdinalIgnoreCase)
+                    ? nameof(Usuario.Email)
+                    : nameof(Usuario.NombreUsuario);
+                ModelState.AddModelError(campo, "Ya existe un usuario con ese email o nombre de usuario.");
+                return View(usuario);
+            }
         }
 
         // Un empleado solo puede editar su propio perfil; un administrador puede editar cualquiera.
@@ -188,9 +202,20 @@ namespace Reservas_Temporales.Controllers
                 usuario.Activo = actual.Activo;
             }
 
-            await _repositorioUsuario.ActualizarAsync(usuario);
-            TempData["Mensaje"] = "Perfil actualizado correctamente.";
-            return RedirectToAction(nameof(Details), new { id });
+            try
+            {
+                await _repositorioUsuario.ActualizarAsync(usuario);
+                TempData["Mensaje"] = "Perfil actualizado correctamente.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                var campo = ex.Message.Contains("email", StringComparison.OrdinalIgnoreCase)
+                    ? nameof(Usuario.Email)
+                    : nameof(Usuario.NombreUsuario);
+                ModelState.AddModelError(campo, "Ya existe otro usuario con ese email o nombre de usuario.");
+                return View(usuario);
+            }
         }
 
         // Cambio de contraseña: parte de "manipular su propio perfil" para los empleados.
@@ -260,17 +285,31 @@ namespace Reservas_Temporales.Controllers
             }
 
             var carpeta = Path.Combine(_entorno.WebRootPath, "uploads", "avatares");
-            Directory.CreateDirectory(carpeta);
-
-            // Borra cualquier avatar anterior del usuario (puede haber quedado con otra extensión).
-            foreach (var archivoExistente in Directory.GetFiles(carpeta, $"avatar_{id}.*"))
-                System.IO.File.Delete(archivoExistente);
-
             var nombreArchivo = $"avatar_{id}{extension}";
             var rutaFisica = Path.Combine(carpeta, nombreArchivo);
-            using (var stream = new FileStream(rutaFisica, FileMode.Create))
+
+            try
             {
-                await archivo.CopyToAsync(stream);
+                Directory.CreateDirectory(carpeta);
+
+                // Borra cualquier avatar anterior del usuario (puede haber quedado con otra extensión).
+                foreach (var archivoExistente in Directory.GetFiles(carpeta, $"avatar_{id}.*"))
+                    System.IO.File.Delete(archivoExistente);
+
+                using (var stream = new FileStream(rutaFisica, FileMode.Create))
+                {
+                    await archivo.CopyToAsync(stream);
+                }
+            }
+            catch (IOException)
+            {
+                TempData["Error"] = "No se pudo guardar el avatar en el servidor. Probá de nuevo.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                TempData["Error"] = "No se pudo guardar el avatar: sin permisos de escritura en el servidor.";
+                return RedirectToAction(nameof(Details), new { id });
             }
 
             await _repositorioUsuario.ActualizarAvatarAsync(id, $"/uploads/avatares/{nombreArchivo}");

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MySqlConnector;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
 using System.Linq;
@@ -55,9 +56,19 @@ namespace Reservas_Temporales.Controllers
                 return View(inquilino);
             }
 
-            var id = await _repositorioInquilino.CrearAsync(inquilino);
-            TempData["Mensaje"] = "Inquilino registrado correctamente.";
-            return RedirectToAction(nameof(Details), new { id });
+            try
+            {
+                var id = await _repositorioInquilino.CrearAsync(inquilino);
+                TempData["Mensaje"] = "Inquilino registrado correctamente.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                // Cubre la carrera entre el chequeo de arriba y el INSERT: si dos personas
+                // cargan el mismo DNI casi al mismo tiempo, el chequeo previo no alcanza.
+                ModelState.AddModelError(nameof(Inquilino.Dni), "Ya existe un inquilino registrado con ese DNI.");
+                return View(inquilino);
+            }
         }
 
         public async Task<IActionResult> Edit(int id)
@@ -73,9 +84,18 @@ namespace Reservas_Temporales.Controllers
         {
             if (id != inquilino.Id) return BadRequest();
             if (!ModelState.IsValid) return View(inquilino);
-            await _repositorioInquilino.ActualizarAsync(inquilino);
-            TempData["Mensaje"] = "Inquilino actualizado correctamente.";
-            return RedirectToAction(nameof(Details), new { id });
+
+            try
+            {
+                await _repositorioInquilino.ActualizarAsync(inquilino);
+                TempData["Mensaje"] = "Inquilino actualizado correctamente.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                ModelState.AddModelError(nameof(Inquilino.Dni), "Ya existe otro inquilino con ese DNI.");
+                return View(inquilino);
+            }
         }
 
         // Baja lógica: solo un administrador puede eliminar entidades.

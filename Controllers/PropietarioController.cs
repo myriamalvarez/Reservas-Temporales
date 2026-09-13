@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using MySqlConnector;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
 using System.Linq;
@@ -46,9 +47,18 @@ namespace Reservas_Temporales.Controllers
         public async Task<IActionResult> Create(Propietario propietario)
         {
             if (!ModelState.IsValid) return View(propietario);
-            var id = await _repositorioPropietario.CrearAsync(propietario);
-            TempData["Mensaje"] = "Propietario creado correctamente.";
-            return RedirectToAction(nameof(Details), new { id });
+
+            try
+            {
+                var id = await _repositorioPropietario.CrearAsync(propietario);
+                TempData["Mensaje"] = "Propietario creado correctamente.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062) // entrada duplicada (UNIQUE)
+            {
+                ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe un propietario con ese DNI.");
+                return View(propietario);
+            }
         }
 
         public async Task<IActionResult> Edit(int id)
@@ -64,9 +74,18 @@ namespace Reservas_Temporales.Controllers
         {
             if (id != propietario.Id) return BadRequest();
             if (!ModelState.IsValid) return View(propietario);
-            await _repositorioPropietario.ActualizarAsync(propietario);
-            TempData["Mensaje"] = "Propietario actualizado correctamente.";
-            return RedirectToAction(nameof(Details), new { id });
+
+            try
+            {
+                await _repositorioPropietario.ActualizarAsync(propietario);
+                TempData["Mensaje"] = "Propietario actualizado correctamente.";
+                return RedirectToAction(nameof(Details), new { id });
+            }
+            catch (MySqlException ex) when (ex.Number == 1062)
+            {
+                ModelState.AddModelError(nameof(Propietario.Dni), "Ya existe otro propietario con ese DNI.");
+                return View(propietario);
+            }
         }
 
         // Baja lógica: solo un administrador puede eliminar entidades.

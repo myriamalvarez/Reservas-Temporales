@@ -11,6 +11,10 @@ namespace Reservas_Temporales.Repositorios
         Task<(List<ReservaListadoItem> Items, int Total)> ListarVigentesPaginadoAsync(
             int pagina, int tamanioPagina);
 
+        // Listado general: todas las reservas (cualquier estado), con filtro opcional.
+        Task<(List<ReservaListadoItem> Items, int Total)> ListarTodasPaginadoAsync(
+            int pagina, int tamanioPagina, EstadoReserva? estado = null);
+
         // Informe: reservas que terminan dentro de los próximos X días.
         Task<List<Reserva>> ListarQueTerminanEnXDiasAsync(int dias);
 

@@ -25,15 +25,26 @@ namespace Reservas_Temporales.Repositorios
             "INNER JOIN inmueble i ON i.id = r.id_inmueble " +
             "INNER JOIN inquilino iq ON iq.id = r.id_inquilino ";
 
+        // Trae también quién creó y quién terminó la reserva (auditoría, solo visible para
+        // administradores en la vista de detalle, según la narrativa).
         public async Task<Reserva?> ObtenerPorIdAsync(int id)
         {
             using var conexion = ObtenerConexion();
-            var sql = SqlBase + "WHERE id = @id";
+            var sql =
+                "SELECT r.id, r.id_inmueble, r.id_inquilino, r.fecha_desde, r.fecha_hasta, " +
+                "r.fecha_hasta_original, r.fecha_terminacion, r.monto_diario, r.multa, r.estado, " +
+                "r.creado_por_user_id, r.terminado_por_user_id, r.activo, r.fecha_creacion, " +
+                "uc.nombre_usuario AS creador_usuario, uc.nombre AS creador_nombre, uc.apellido AS creador_apellido, " +
+                "ut.nombre_usuario AS terminador_usuario, ut.nombre AS terminador_nombre, ut.apellido AS terminador_apellido " +
+                "FROM reserva r " +
+                "INNER JOIN usuario uc ON uc.id = r.creado_por_user_id " +
+                "LEFT JOIN usuario ut ON ut.id = r.terminado_por_user_id " +
+                "WHERE r.id = @id";
             using var comando = new MySqlCommand(sql, conexion);
             comando.Parameters.AddWithValue("@id", id);
             await conexion.OpenAsync();
             using var lector = await comando.ExecuteReaderAsync();
-            return await lector.ReadAsync() ? Mapear(lector) : null;
+            return await lector.ReadAsync() ? MapearConAuditoria(lector) : null;
         }
 
         // Informe: reservas vigentes (por fecha desde/hasta, no solo por el campo estado).
@@ -71,6 +82,59 @@ namespace Reservas_Temporales.Repositorios
             var sqlPagina = SqlListado + "WHERE " + condicion +
                              " ORDER BY r.fecha_hasta LIMIT @tamanioPagina OFFSET @offset";
             using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
+            comandoPagina.Parameters.AddWithValue("@tamanioPagina", tamanioPagina);
+            comandoPagina.Parameters.AddWithValue("@offset", (pagina - 1) * tamanioPagina);
+
+            var items = new List<ReservaListadoItem>();
+            using var lectorPagina = await comandoPagina.ExecuteReaderAsync();
+            while (await lectorPagina.ReadAsync())
+            {
+                items.Add(new ReservaListadoItem
+                {
+                    Id = lectorPagina.GetInt32("id"),
+                    FechaDesde = lectorPagina.GetDateTime("fecha_desde"),
+                    FechaHasta = lectorPagina.GetDateTime("fecha_hasta"),
+                    MontoDiario = lectorPagina.GetDecimal("monto_diario"),
+                    Estado = ConversionesEnum.ATextoEstadoReserva(lectorPagina.GetString("estado")),
+                    InmuebleDireccion = lectorPagina.GetString("inmueble_direccion"),
+                    InquilinoNombre = lectorPagina.GetString("inquilino_nombre")
+                });
+            }
+
+            return (items, total);
+        }
+
+        // Listado general: TODAS las reservas (cualquier estado), a diferencia de
+        // ListarVigentesPaginadoAsync. Es la forma de llegar a una reserva ya finalizada
+        // o finalizada anticipadamente sin tener que conocer/adivinar su Id.
+        public async Task<(List<ReservaListadoItem> Items, int Total)> ListarTodasPaginadoAsync(
+            int pagina, int tamanioPagina, EstadoReserva? estado = null)
+        {
+            if (pagina < 1) pagina = 1;
+            if (tamanioPagina < 1) tamanioPagina = 10;
+
+            var condiciones = new List<string> { "r.activo = 1" };
+            if (estado.HasValue) condiciones.Add("r.estado = @estado");
+            var whereSql = "WHERE " + string.Join(" AND ", condiciones);
+
+            using var conexion = ObtenerConexion();
+            await conexion.OpenAsync();
+
+            void AgregarFiltros(MySqlCommand comandoAAgregar)
+            {
+                if (estado.HasValue)
+                    comandoAAgregar.Parameters.AddWithValue("@estado", ConversionesEnum.AEstadoReservaTexto(estado.Value));
+            }
+
+            var sqlTotal = "SELECT COUNT(*) FROM reserva r " + whereSql;
+            using var comandoTotal = new MySqlCommand(sqlTotal, conexion);
+            AgregarFiltros(comandoTotal);
+            var total = Convert.ToInt32(await comandoTotal.ExecuteScalarAsync());
+
+            var sqlPagina = SqlListado + whereSql +
+                             " ORDER BY r.fecha_desde DESC LIMIT @tamanioPagina OFFSET @offset";
+            using var comandoPagina = new MySqlCommand(sqlPagina, conexion);
+            AgregarFiltros(comandoPagina);
             comandoPagina.Parameters.AddWithValue("@tamanioPagina", tamanioPagina);
             comandoPagina.Parameters.AddWithValue("@offset", (pagina - 1) * tamanioPagina);
 
@@ -239,5 +303,33 @@ namespace Reservas_Temporales.Repositorios
             Activo = lector.GetBoolean("activo"),
             FechaCreacion = lector.GetDateTime("fecha_creacion")
         };
+
+        // Igual que Mapear, pero además arma los objetos Usuario livianos de auditoría
+        // (CreadoPor / TerminadoPor) a partir de los JOIN de ObtenerPorIdAsync.
+        private static Reserva MapearConAuditoria(MySqlDataReader lector)
+        {
+            var reserva = Mapear(lector);
+
+            reserva.CreadoPor = new Usuario
+            {
+                Id = reserva.CreadoPorUserId,
+                NombreUsuario = lector.GetString("creador_usuario"),
+                Nombre = lector.GetString("creador_nombre"),
+                Apellido = lector.GetString("creador_apellido")
+            };
+
+            if (reserva.TerminadoPorUserId.HasValue && !lector.IsDBNull(lector.GetOrdinal("terminador_usuario")))
+            {
+                reserva.TerminadoPor = new Usuario
+                {
+                    Id = reserva.TerminadoPorUserId.Value,
+                    NombreUsuario = lector.GetString("terminador_usuario"),
+                    Nombre = lector.GetString("terminador_nombre"),
+                    Apellido = lector.GetString("terminador_apellido")
+                };
+            }
+
+            return reserva;
+        }
     }
 }

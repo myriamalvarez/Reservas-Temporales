@@ -26,12 +26,49 @@
                     @if (User.Identity?.IsAuthenticated == true)
                     {
                         <ul class="navbar-nav flex-grow-1">
-                            <li class="nav-item"><a class="nav-link" asp-controller="Inmueble" asp-action="Index">Inmuebles</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Inmueble" asp-action="Buscar">Buscar disponibilidad</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Reserva" asp-action="Index">Reservas</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Propietario" asp-action="Index">Propietarios</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="Inquilino" asp-action="Index">Inquilinos</a></li>
-                            <li class="nav-item"><a class="nav-link" asp-controller="TipoInmueble" asp-action="Index">Tipos de inmueble</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Inmuebles
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Inmueble" asp-action="Index">Ver todos</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Inmueble" asp-action="Create">Nuevo inmueble</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Inmueble" asp-action="Buscar">Buscar disponibilidad</a></li>
+                                    <li><hr class="dropdown-divider" /></li>
+                                    <li><a class="dropdown-item" asp-controller="TipoInmueble" asp-action="Index">Tipos de inmueble</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Propietarios
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Propietario" asp-action="Index">Ver todos</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Propietario" asp-action="Create">Nuevo propietario</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Inquilinos
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Inquilino" asp-action="Index">Ver todos</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Inquilino" asp-action="Create">Nuevo inquilino</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Reservas
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" asp-controller="Reserva" asp-action="Index">Vigentes</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Reserva" asp-action="Todas">Todas</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Reserva" asp-action="ProximasATerminar">Próximas a vencer</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" asp-controller="Pago" asp-action="Index">Pagos</a>
+                            </li>
                             <li class="nav-item dropdown">
                                 <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                                     Informes
@@ -39,12 +76,19 @@
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" asp-controller="Informe" asp-action="MasReservados">Más reservados</a></li>
                                     <li><a class="dropdown-item" asp-controller="Informe" asp-action="SinReservas">Sin reservas recientes</a></li>
-                                    <li><a class="dropdown-item" asp-controller="Reserva" asp-action="ProximasATerminar">Reservas próximas a vencer</a></li>
                                 </ul>
                             </li>
                             @if (User.IsInRole("Administrador"))
                             {
-                                <li class="nav-item"><a class="nav-link" asp-controller="Usuario" asp-action="Index">Usuarios</a></li>
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                        Usuarios
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" asp-controller="Usuario" asp-action="Index">Ver todos</a></li>
+                                        <li><a class="dropdown-item" asp-controller="Usuario" asp-action="Create">Nuevo usuario</a></li>
+                                    </ul>
+                                </li>
                             }
                         </ul>
                         <ul class="navbar-nav">

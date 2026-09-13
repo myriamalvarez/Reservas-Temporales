@@ -28,6 +28,28 @@
             </li>
         </ul>
     </div>
+
+    @if (User.IsInRole("Administrador"))
+    {
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">Auditoría <span class="text-muted small">(solo administradores)</span></div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <strong>Creada por:</strong>
+                        @(Model.CreadoPor != null ? $"{Model.CreadoPor.Nombre} {Model.CreadoPor.Apellido} ({Model.CreadoPor.NombreUsuario})" : "—")
+                    </li>
+                    @if (Model.TerminadoPor != null)
+                    {
+                        <li class="list-group-item">
+                            <strong>Terminada anticipadamente por:</strong>
+                            @($"{Model.TerminadoPor.Nombre} {Model.TerminadoPor.Apellido} ({Model.TerminadoPor.NombreUsuario})")
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
 </div>
 
 <div class="d-flex gap-2 mb-4">
@@ -52,6 +74,10 @@
             <th>Fecha</th>
             <th>Importe</th>
             <th>Estado</th>
+            @if (User.IsInRole("Administrador"))
+            {
+                <th>Auditoría</th>
+            }
             <th></th>
         </tr>
     </thead>
@@ -73,6 +99,17 @@
                 <td>@pago.FechaPago.ToString("dd/MM/yyyy")</td>
                 <td>@pago.Importe.ToString("C")</td>
                 <td>@(pago.Anulado ? "Anulado" : "Activo")</td>
+                @if (User.IsInRole("Administrador"))
+                {
+                    <td class="small text-muted text-decoration-none">
+                        Creado por @(pago.CreadoPor?.NombreUsuario ?? "—")
+                        @if (pago.Anulado && pago.AnuladoPor != null)
+                        {
+                            <br />
+                            <text>Anulado por @pago.AnuladoPor.NombreUsuario</text>
+                        }
+                    </td>
+                }
                 <td>
                     @if (!pago.Anulado)
                     {
@@ -87,7 +124,7 @@
         }
         @if (!Model.Pagos.Any())
         {
-            <tr><td colspan="5" class="text-center text-muted">Todavía no hay pagos registrados.</td></tr>
+            <tr><td colspan="@(User.IsInRole("Administrador") ? 6 : 5)" class="text-center text-muted">Todavía no hay pagos registrados.</td></tr>
         }
     </tbody>
 </table>
@@ -111,3 +148,4 @@
         <button type="submit" class="btn btn-primary w-100">Registrar</button>
     </div>
 </form>
+

@@ -2,11 +2,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Reservas_Temporales.Models;
 using Reservas_Temporales.Repositorios;
+using System.Linq;
 
 namespace Reservas_Temporales.Controllers
 {
     // Los pagos se cargan y anulan desde la pantalla de detalle de la reserva,
-    // por eso todas las acciones redirigen de vuelta a Reserva/Details.
+    // por eso esas acciones redirigen de vuelta a Reserva/Details. El listado general
+    // (Index) sí es una pantalla propia, para poder encontrar un pago sin conocer antes
+    // a qué reserva pertenece.
     public class PagoController : ControladorBase
     {
         private readonly IRepositorioPago _repositorioPago;
@@ -14,6 +17,33 @@ namespace Reservas_Temporales.Controllers
         public PagoController(IRepositorioPago repositorioPago)
         {
             _repositorioPago = repositorioPago;
+        }
+
+        // Vista Vue con paginado por servidor de todos los pagos.
+        public IActionResult Index() => View();
+
+        [HttpGet]
+        public async Task<IActionResult> ListarJson(int pagina = 1, int tamanioPagina = 10, bool? anulado = null)
+        {
+            var (items, total) = await _repositorioPago.ListarTodosPaginadoAsync(pagina, tamanioPagina, anulado);
+            return Json(new
+            {
+                items = items.Select(p => new
+                {
+                    p.Id,
+                    p.IdReserva,
+                    p.Concepto,
+                    FechaPago = p.FechaPago.ToString("dd/MM/yyyy"),
+                    p.Importe,
+                    p.Anulado,
+                    p.InmuebleDireccion,
+                    p.InquilinoNombre
+                }),
+                total,
+                pagina,
+                tamanioPagina,
+                totalPaginas = (int)Math.Ceiling(total / (double)tamanioPagina)
+            });
         }
 
         [HttpPost]

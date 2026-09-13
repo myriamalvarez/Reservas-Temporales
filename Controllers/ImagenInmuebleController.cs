@@ -50,12 +50,25 @@ namespace Reservas_Temporales.Controllers
 
             var nombreArchivo = $"{Guid.NewGuid()}{extension}";
             var carpeta = Path.Combine(_entorno.WebRootPath, "uploads", "inmuebles", idInmueble.ToString());
-            Directory.CreateDirectory(carpeta);
             var rutaFisica = Path.Combine(carpeta, nombreArchivo);
 
-            using (var stream = new FileStream(rutaFisica, FileMode.Create))
+            try
             {
-                await archivo.CopyToAsync(stream);
+                Directory.CreateDirectory(carpeta);
+                using (var stream = new FileStream(rutaFisica, FileMode.Create))
+                {
+                    await archivo.CopyToAsync(stream);
+                }
+            }
+            catch (IOException)
+            {
+                TempData["Error"] = "No se pudo guardar la imagen en el servidor. Probá de nuevo.";
+                return RedirectToAction("Details", "Inmueble", new { id = idInmueble });
+            }
+            catch (UnauthorizedAccessException)
+            {
+                TempData["Error"] = "No se pudo guardar la imagen: sin permisos de escritura en el servidor.";
+                return RedirectToAction("Details", "Inmueble", new { id = idInmueble });
             }
 
             // Ruta relativa (web), la que se guarda en la BD y se usa en los <img src="...">.
