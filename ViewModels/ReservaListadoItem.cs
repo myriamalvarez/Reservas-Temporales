@@ -2,7 +2,7 @@ using Reservas_Temporales.Models;
 
 namespace Reservas_Temporales.ViewModels
 {
-    // Proyección liviana para listados (evita traer el modelo completo con todas sus FKs).
+    // Para listados (evita traer el modelo completo con todas sus FKs).
     public class ReservaListadoItem
     {
         public int Id { get; set; }

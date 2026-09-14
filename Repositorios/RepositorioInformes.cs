@@ -4,8 +4,8 @@ using Reservas_Temporales.ViewModels;
 
 namespace Reservas_Temporales.Repositorios
 {
-    // Consultas de agregación para los informes de la narrativa. Separado de RepositorioInmueble
-    // porque no son operaciones CRUD sobre una entidad sino reportes que combinan varias tablas.
+    // Consultas para los informes de la narrativa. Separado de RepositorioInmueble
+    // porque no son operaciones CRUD sino reportes que combinan varias tablas.
     public class RepositorioInformes : RepositorioBase
     {
         public RepositorioInformes(IConfiguration configuration) : base(configuration)

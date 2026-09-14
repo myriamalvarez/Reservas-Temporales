@@ -42,7 +42,6 @@ namespace Reservas_Temporales.Controllers
 
         public IActionResult Create() => View(new Inquilino());
 
-        // ABM inquilino: se registra al entrevistarlo (DNI, nombre completo, datos de contacto).
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Inquilino inquilino)

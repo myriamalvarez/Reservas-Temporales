@@ -47,7 +47,7 @@ namespace Reservas_Temporales.Repositorios
             return inmuebles;
         }
 
-        // Paginado por servidor (requisito del proyecto): trae solo una página de resultados
+        // Paginado por servidor: trae solo una página de resultados
         // más el total de registros, para que el cliente arme los controles de paginación.
         public async Task<(List<Inmueble> Items, int Total)> ListarPaginadoAsync(
             int pagina, int tamanioPagina,

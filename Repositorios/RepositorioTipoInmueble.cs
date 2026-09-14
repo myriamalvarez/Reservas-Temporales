@@ -25,7 +25,7 @@ namespace Reservas_Temporales.Repositorios
             return tipos;
         }
 
-        // Paginado por servidor. Es un catálogo chico, pero se mantiene el mismo patrón por consistencia.
+        // Paginado por servidor. Es chico, pero se mantiene el mismo patrón por consistencia.
         public async Task<(List<TipoInmueble> Items, int Total)> ListarPaginadoAsync(int pagina, int tamanioPagina)
         {
             if (pagina < 1) pagina = 1;

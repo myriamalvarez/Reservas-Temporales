@@ -17,7 +17,7 @@ namespace Reservas_Temporales.Repositorios
 
         // Informe: pagos de una reserva en particular.
         // Trae también quién creó y quién anuló cada pago (auditoría, solo visible para
-        // administradores en la vista de detalle, según la narrativa).
+        // administradores en la vista de detalle).
         public async Task<List<Pago>> ListarPorReservaAsync(int idReserva)
         {
             var pagos = new List<Pago>();
@@ -161,7 +161,7 @@ namespace Reservas_Temporales.Repositorios
                 ? null : lector.GetInt32("anulado_por_user_id")
         };
 
-        // Igual que Mapear, pero además arma los objetos Usuario livianos de auditoría
+        // Igual que Mapear, pero además arma los objetos Usuario para auditoría
         // (CreadoPor / AnuladoPor) a partir de los JOIN de ListarPorReservaAsync.
         private static Pago MapearConAuditoria(MySqlDataReader lector)
         {

@@ -26,7 +26,7 @@ namespace Reservas_Temporales.Repositorios
             "INNER JOIN inquilino iq ON iq.id = r.id_inquilino ";
 
         // Trae también quién creó y quién terminó la reserva (auditoría, solo visible para
-        // administradores en la vista de detalle, según la narrativa).
+        // administradores en la vista de detalle).
         public async Task<Reserva?> ObtenerPorIdAsync(int id)
         {
             using var conexion = ObtenerConexion();
@@ -304,7 +304,7 @@ namespace Reservas_Temporales.Repositorios
             FechaCreacion = lector.GetDateTime("fecha_creacion")
         };
 
-        // Igual que Mapear, pero además arma los objetos Usuario livianos de auditoría
+        // Igual que Mapear, pero además arma los objetos Usuario para auditoría
         // (CreadoPor / TerminadoPor) a partir de los JOIN de ObtenerPorIdAsync.
         private static Reserva MapearConAuditoria(MySqlDataReader lector)
         {

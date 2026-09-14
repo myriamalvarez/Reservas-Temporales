@@ -303,7 +303,7 @@ namespace Reservas_Temporales.Controllers
             }
             catch (IOException)
             {
-                TempData["Error"] = "No se pudo guardar el avatar en el servidor. Probá de nuevo.";
+                TempData["Error"] = "No se pudo guardar el avatar en el servidor. Probá nuevamente.";
                 return RedirectToAction(nameof(Details), new { id });
             }
             catch (UnauthorizedAccessException)
@@ -349,13 +349,6 @@ namespace Reservas_Temporales.Controllers
             TempData["Mensaje"] = "Usuario eliminado.";
             return RedirectToAction(nameof(Index));
         }
-
-        // ------------------------------------------------------------------
-        // Seguridad: hashing de contraseña y generación del JWT.
-        // Antes vivían en clases aparte (Seguridad/PasswordHasher y Seguridad/TokenService);
-        // se dejan acá como métodos privados para que todo el flujo de usuario quede en un
-        // solo archivo, como en el resto del curso.
-        // ------------------------------------------------------------------
 
         private string HashearPassword(string password)
         {

@@ -62,7 +62,7 @@ namespace Reservas_Temporales.Controllers
             }
             catch (IOException)
             {
-                TempData["Error"] = "No se pudo guardar la imagen en el servidor. Probá de nuevo.";
+                TempData["Error"] = "No se pudo guardar la imagen en el servidor. Probá nuevamente.";
                 return RedirectToAction("Details", "Inmueble", new { id = idInmueble });
             }
             catch (UnauthorizedAccessException)
